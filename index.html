@@ -1,0 +1,1315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Net Zero Digital Twin · Demo Tower</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#E8EDEA;--panel:#F6F8F7;--ink:#17221E;--ink2:#58655F;--line:#CBD5D0;--chip:#DDE5E1;
+  --good:#12874A;--bad:#B5372B;--grid:#2F6F8F;--sun:#D99A0B;--s1:#C4572A;--s2:#3F5E6B;
+  --sky:#DCE6E2;--ground:#B4C2BA;--plaza:#CDD8D2;--road:#7E8A84;--bld:#A6B5AD;--slab:#E6ECE8;--roof:#8D9893;--edge:#2B3B34;
+  --is-dark:0;--glass:86%;
+  box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#0D1411;--panel:#131C18;--ink:#E5EDE9;--ink2:#93A29B;--line:#25322C;--chip:#1D2923;
+    --good:#3CC882;--bad:#E4685A;--grid:#63AACB;--sun:#F0B53A;--s1:#E27C4C;--s2:#82A3B1;
+    --sky:#0F1A16;--ground:#16211C;--plaza:#1D2A24;--road:#2A3731;--bld:#26332D;--slab:#3A4842;--roof:#3C4842;--edge:#BFE3D0;
+    --is-dark:1;--glass:80%;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0D1411;--panel:#131C18;--ink:#E5EDE9;--ink2:#93A29B;--line:#25322C;--chip:#1D2923;
+  --good:#3CC882;--bad:#E4685A;--grid:#63AACB;--sun:#F0B53A;--s1:#E27C4C;--s2:#82A3B1;
+  --sky:#0F1A16;--ground:#16211C;--plaza:#1D2A24;--road:#2A3731;--bld:#26332D;--slab:#3A4842;--roof:#3C4842;--edge:#BFE3D0;
+  --is-dark:1;--glass:80%;
+}
+html{height:100%;scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;height:100%;background:var(--bg);color:var(--ink);overflow:hidden;
+  font-family:'IBM Plex Sans Thai',system-ui,'Noto Sans Thai',Tahoma,sans-serif;font-size:13px;line-height:1.5;
+  display:grid;grid-template-rows:auto minmax(0,1fr) auto;font-variant-numeric:tabular-nums}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--good);outline-offset:2px}
+
+#top{display:flex;align-items:center;gap:12px;padding:10px 14px;border-bottom:1px solid var(--line);background:var(--panel)}
+#top h1{margin:0;font-size:15px;font-weight:600;letter-spacing:.1px}
+#top p{margin:0;color:var(--ink2);font-size:12px}
+#top .sp{flex:1}
+.badge{font-size:11px;padding:2px 8px;border-radius:99px;border:1px solid var(--line);color:var(--ink2);white-space:nowrap}
+.ib{width:30px;height:30px;border-radius:8px;border:1px solid var(--line);background:transparent;cursor:pointer;display:grid;place-items:center}
+.ib:hover{background:var(--chip)}
+.ib svg{width:16px;height:16px;stroke:var(--ink2);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+#main{display:grid;grid-template-columns:minmax(0,1fr) 396px;min-height:0}
+#stage{position:relative;min-height:0;overflow:hidden;background:var(--sky)}
+#gl{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:grab}
+#gl:active{cursor:grabbing}
+#panel{display:flex;flex-direction:column;min-height:0;background:var(--panel);border-left:1px solid var(--line)}
+@media (max-width:860px){
+  #main{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(250px,1fr) minmax(0,40vh)}
+  #panel{border-left:0;border-top:1px solid var(--line)}
+  #top p{display:none}
+  #top h1{white-space:nowrap;font-size:14px}
+}
+@media (max-width:520px){.badge{display:none}}
+
+#tools{position:absolute;top:10px;left:10px;right:10px;display:flex;flex-wrap:wrap;gap:6px;pointer-events:none}
+#tools>*{pointer-events:auto}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden;background:var(--panel)}
+.seg button{border:0;background:transparent;padding:5px 11px;cursor:pointer;color:var(--ink2)}
+.seg button[aria-pressed=true]{background:var(--ink);color:var(--panel);font-weight:500}
+#langSeg button{padding:4px 9px}
+.chip{border:1px solid var(--line);background:var(--panel);border-radius:9px;padding:5px 10px;cursor:pointer;color:var(--ink2)}
+.chip[aria-pressed=true]{border-color:var(--good);color:var(--ink);box-shadow:inset 0 0 0 1px var(--good)}
+#legend{position:absolute;left:10px;bottom:10px;width:min(300px,calc(100% - 20px));padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:var(--panel);font-size:11px;color:var(--ink2)}
+#legend .bar{height:8px;border-radius:4px;margin:5px 0 3px}
+#legend .tk{position:relative;height:14px}
+#legend .tk span{position:absolute;transform:translateX(-50%);white-space:nowrap}
+#legend .tk span.z{color:var(--good);font-weight:600}
+#tags{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.tag{position:absolute;transform:translate(-50%,-100%);padding:3px 9px;border-radius:8px;background:var(--panel);border:1px solid var(--line);font-size:12px;white-space:nowrap;pointer-events:auto;cursor:default;z-index:1;outline-offset:2px}
+@supports ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))) and (background:color-mix(in srgb,red 50%,transparent)){
+  .tag{background:color-mix(in srgb,var(--panel) 80%,transparent);border-color:color-mix(in srgb,var(--line) 60%,transparent);-webkit-backdrop-filter:blur(7px);backdrop-filter:blur(7px)}
+}
+.tag .tg-bar,.tag .tg-sub{display:none}
+.tag:hover,.tag:focus-visible,.tag.open{background:var(--panel);border-color:var(--line);-webkit-backdrop-filter:none;backdrop-filter:none;min-width:170px;z-index:5;padding:4px 9px 5px;box-shadow:0 2px 10px rgba(0,0,0,.14)}
+.tag:hover .tg-bar,.tag:focus-visible .tg-bar,.tag.open .tg-bar{display:block}
+.tag:hover .tg-sub,.tag:focus-visible .tg-sub,.tag.open .tg-sub{display:block}
+.tag .tg1{display:flex;align-items:center;gap:0}
+.tag .tg-bar{height:3px;background:var(--chip);border-radius:2px;margin-top:5px;overflow:hidden}
+.tag .tg-bar i{display:block;height:100%;border-radius:2px}
+.tag .tg-sub{font-size:11px;color:var(--ink2);margin-top:3px}
+.tag .tg-sub .ic{width:12px;height:12px;margin-right:4px;vertical-align:-2px}
+.tag.fade{animation:tagfade .18s ease-out}
+@keyframes tagfade{from{opacity:0;margin-top:5px}to{opacity:1;margin-top:0}}
+.tag b{font-weight:600}
+.tag.shift::after,.tag.moved::after{display:none}
+.tag::after{content:"";position:absolute;left:50%;bottom:-5px;width:1px;height:5px;background:var(--ink2)}
+#tip{position:absolute;display:none;min-width:190px;padding:8px 10px;border-radius:10px;border:1px solid var(--line);background:var(--panel);font-size:12px;pointer-events:none;z-index:5}
+#tip b{font-weight:600}
+#tip .r{display:flex;justify-content:space-between;gap:14px;color:var(--ink2)}
+#tip .r span:last-child{color:var(--ink)}
+#fallback{position:absolute;inset:0;display:none;place-items:center;text-align:center;color:var(--ink2);padding:24px}
+
+#tabs{display:flex;border-bottom:1px solid var(--line);flex:none}
+.tab{flex:1;padding:10px 4px;background:none;border:0;border-bottom:2px solid transparent;color:var(--ink2);cursor:pointer;white-space:nowrap}
+.tab[aria-selected=true]{color:var(--ink);font-weight:600;border-bottom-color:var(--good)}
+#body{overflow:auto;padding:14px 14px 18px;flex:1;min-height:0}
+#body h2{margin:0 0 2px;font-size:19px;font-weight:600}
+#body h3{margin:16px 0 6px;font-size:13px;font-weight:600}
+.mut{color:var(--ink2)}
+.small{font-size:11.5px}
+.row{display:grid;grid-template-columns:minmax(0,1fr) auto 84px;gap:8px;align-items:baseline;padding:6px 0;border-bottom:1px solid var(--line)}
+.row:last-child{border-bottom:0}
+.row .v{font-weight:500;text-align:right}
+.row .d{font-size:11.5px;text-align:right}
+.good{color:var(--good)}.bad{color:var(--bad)}
+.note{margin-top:14px;padding:9px 11px;border-radius:9px;background:var(--chip);color:var(--ink2);font-size:11.5px}
+.big{font-size:34px;font-weight:600;line-height:1.1;letter-spacing:-.3px}
+.unit{font-size:12px;font-weight:400;color:var(--ink2);margin-left:4px}
+svg.ch{width:100%;height:auto;display:block;overflow:visible}
+svg.ch text{fill:var(--ink2);font-size:9.5px;font-family:inherit}
+svg.ch .ax{stroke:var(--line);stroke-width:1}
+.stack{display:flex;height:12px;border-radius:6px;overflow:hidden;background:var(--chip);margin:6px 0 8px}
+.stack i{display:block;height:100%}
+.leg{display:grid;grid-template-columns:1fr 1fr;gap:3px 10px;font-size:11.5px}
+.leg span{display:flex;align-items:center;gap:6px;min-width:0}
+.leg em{width:9px;height:9px;border-radius:3px;flex:none}
+.leg u{text-decoration:none;margin-left:auto;color:var(--ink2)}
+.gauge{position:relative;height:10px;border-radius:5px;background:var(--chip);margin:22px 0 22px}
+.gauge .fill{position:absolute;left:0;top:0;bottom:0;border-radius:5px}
+.gauge .mk{position:absolute;top:-16px;transform:translateX(-50%);font-size:10.5px;white-space:nowrap}
+.gauge .mk::after{content:"";position:absolute;left:50%;top:15px;width:2px;height:16px;background:currentColor;transform:translateX(-50%)}
+.gauge .mk.t{color:var(--good);font-weight:600}
+.gauge .mk.c{color:var(--ink);top:auto;bottom:-20px}
+.gauge .mk.c::after{top:-16px}
+table.t{width:100%;border-collapse:collapse;font-size:12px}
+table.t th{font-weight:500;color:var(--ink2);text-align:right;padding:4px 0;border-bottom:1px solid var(--line)}
+table.t th:first-child,table.t td:first-child{text-align:left}
+table.t td{text-align:right;padding:5px 0;border-bottom:1px solid var(--line)}
+.ctl{display:flex;flex-wrap:wrap;gap:10px 14px;margin:10px 0 4px}
+.ctl label{display:flex;flex-direction:column;gap:2px;font-size:11.5px;color:var(--ink2)}
+.ctl select{font:inherit;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:4px 8px}
+.frow{display:grid;grid-template-columns:10px 34px minmax(0,1fr) 54px;gap:8px;align-items:center;width:100%;padding:6px 4px;border:0;border-bottom:1px solid var(--line);background:none;cursor:pointer;text-align:left;position:relative}
+.frow:hover,.frow.on{background:var(--chip)}
+.frow .dot{width:10px;height:10px;border-radius:3px}
+.frow .fn{font-weight:600}
+.frow .fu{color:var(--ink2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px}
+.frow .fv{text-align:right;font-weight:500}
+.frow .fb{position:absolute;left:0;bottom:0;height:2px;width:100%}
+.frow .fb i{display:block;height:100%}
+.spark{width:100%;height:auto;display:block}
+
+#time{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:4px 12px;align-items:center;padding:8px 14px 10px;border-top:1px solid var(--line);background:var(--panel)}
+#play{width:34px;height:34px;border-radius:50%;border:0;background:var(--ink);color:var(--panel);cursor:pointer;display:grid;place-items:center}
+#play svg{width:14px;height:14px;fill:currentColor}
+#mlabel{font-size:15px;font-weight:600;min-width:78px;text-align:right}
+#ev{grid-column:2;font-size:11.5px;color:var(--ink2);min-height:17px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#rangeWrap{position:relative}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:20px;margin:0;background:transparent;cursor:pointer}
+input[type=range]::-webkit-slider-runnable-track{height:4px;border-radius:2px;background:var(--line)}
+input[type=range]::-moz-range-track{height:4px;border-radius:2px;background:var(--line)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;margin-top:-6px;border-radius:50%;background:var(--good);border:2px solid var(--panel)}
+input[type=range]::-moz-range-thumb{width:12px;height:12px;border-radius:50%;background:var(--good);border:2px solid var(--panel)}
+#ticks{position:relative;height:12px;margin-top:-2px}
+#ticks button{position:absolute;top:0;width:8px;height:12px;margin-left:-4px;padding:0;border:0;background:none;cursor:pointer}
+#ticks button::before{content:"";display:block;width:2px;height:8px;margin:0 auto;background:var(--ink2);border-radius:1px}
+#ticks button.pv::before{background:var(--sun)}#ticks button.eff::before{background:var(--good)}#ticks button.s1::before{background:var(--s1)}
+#yrs{position:relative;height:12px;font-size:10px;color:var(--ink2)}
+#yrs span{position:absolute;transform:translateX(-50%)}
+.sl{margin:10px 0 2px}
+.sl .t{display:flex;justify-content:space-between;gap:8px;font-size:12px}
+.sl .t b{font-weight:500;white-space:nowrap}
+.sl input[type=range]{height:18px}
+.presets{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 2px}
+table.t.sm{font-size:11px}
+table.t.sm th,table.t.sm td{padding:4px 0}
+.ok{color:var(--good)}
+.note b{color:var(--ink);font-weight:600}
+.note ul{margin:6px 0 0;padding-left:18px}
+.note li{margin:4px 0;padding-left:2px}
+.note li::marker{color:var(--ink2)}
+.sw{display:inline-flex;align-items:center;gap:10px;cursor:pointer;font-size:12.5px;user-select:none;position:relative}
+.sw input{position:absolute;opacity:0;width:0;height:0}
+.sw .trk{width:38px;height:22px;border-radius:99px;background:var(--line);position:relative;transition:background .15s;flex:none}
+.sw .trk::after{content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:var(--panel);transition:transform .15s}
+.sw input:checked+.trk{background:var(--good)}
+.sw input:checked+.trk::after{transform:translateX(16px)}
+.sw input:focus-visible+.trk{outline:2px solid var(--good);outline-offset:2px}
+.sw b{font-weight:600}
+#tip{width:262px;min-width:0;padding:12px}
+.tp-h{display:flex;align-items:center;gap:7px}
+.tp-h .dot{width:10px;height:10px;border-radius:3px;flex:none}
+.tp-h b{font-size:14px;font-weight:600}
+.tp-h .u{font-size:11px;color:var(--ink2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.tp-chip{margin-left:auto;font-size:11px;padding:1px 8px;border-radius:99px;color:var(--ink);white-space:nowrap;flex:none}
+.tp-sub{font-size:11px;color:var(--ink2);margin:2px 0 8px}
+.tp-k{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.tp-k>div{background:var(--chip);border-radius:8px;padding:6px 8px;min-width:0}
+.tp-k i{font-style:normal;font-size:11px;color:var(--ink2);display:block}
+.tp-k b{font-size:15px;font-weight:600;display:block;line-height:1.25}
+.tp-k s{text-decoration:none;font-size:11px;display:block;color:var(--ink2);white-space:nowrap}
+.tp-bar{display:flex;height:10px;border-radius:5px;overflow:hidden;margin:10px 0 7px;background:var(--chip)}
+.tp-bar i{display:block;height:100%}
+.tp-leg{display:grid;grid-template-columns:1fr 1fr;gap:2px 8px;font-size:11px;color:var(--ink2)}
+.tp-leg b{color:var(--ink);font-weight:500}
+.tp-rk{font-size:11px;color:var(--ink2);margin:10px 0 3px}
+.tp-rk b{color:var(--ink);font-weight:600}
+.tp-ft{border-top:1px solid var(--line);margin-top:8px;padding-top:7px;font-size:11px;color:var(--ink2)}
+@media (min-width:641px){
+  :root{--pw:clamp(300px,42vw,396px)}
+  #main{position:relative;display:block}
+  #stage{position:absolute;inset:0}
+  #panel{position:absolute;top:0;right:0;bottom:0;width:var(--pw);border-left:1px solid var(--line);border-top:0}
+  #stage #tools{right:calc(var(--pw) + 56px)}
+  #stage .pbtn{right:calc(var(--pw) + 10px)}
+  #main.nopanel #stage #tools{right:56px}
+  #main.nopanel #stage .pbtn{right:10px}
+  #panel{background:color-mix(in srgb,var(--panel) 96%,transparent)}
+}
+@supports ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))) and (background:color-mix(in srgb,red 50%,transparent)){
+  @media (min-width:641px){
+    #panel{background:color-mix(in srgb,var(--panel) var(--glass),transparent);-webkit-backdrop-filter:blur(12px) saturate(1.1);backdrop-filter:blur(12px) saturate(1.1)}
+  }
+}
+@media (prefers-reduced-transparency:reduce){#panel,.tag{background:var(--panel)!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}}
+#main.nopanel{grid-template-columns:minmax(0,1fr)}
+#main.nopanel #panel{display:none}
+#tools{right:56px}
+.pbtn{position:absolute;top:10px;right:10px;width:34px;height:34px;border-radius:9px;border:1px solid var(--line);background:var(--panel);color:var(--ink2);cursor:pointer;display:grid;place-items:center;padding:0}
+.pbtn:hover{background:var(--chip);color:var(--ink)}
+.pbtn svg.ic{width:18px;height:18px;vertical-align:0}
+@media (max-width:860px){#main.nopanel{grid-template-rows:minmax(0,1fr)}}
+svg.ic{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none;vertical-align:-3px}
+.row .ic,.sl .ic{margin-right:8px;color:var(--ink2)}
+.tab{display:flex;align-items:center;justify-content:center;gap:4px;font-size:12.5px;padding:10px 2px;min-width:0}
+.tab svg.ic{width:15px;height:15px}
+.chip,.seg button{display:inline-flex;align-items:center;gap:6px}
+.tag .ic{width:14px;height:14px;margin-right:5px;vertical-align:-2px}
+.sl .t span{display:flex;align-items:center;min-width:0}
+@media (min-width:641px) and (max-width:900px){
+  .tab .lbl{display:none}
+  .tab[aria-selected=true]{flex:2.4}
+  .tab[aria-selected=true] .lbl{display:inline}
+}
+@media (max-width:520px){
+  #tools .lbl{display:none}
+  #tools .chip,#tools .seg button{padding:7px 10px}
+  .tab .lbl{display:none}
+  .tab[aria-selected=true]{flex:2.4}
+  .tab[aria-selected=true] .lbl{display:inline}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+@media (max-width:860px){
+  #tools{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
+  #tools>*{flex:none}
+  #legend{width:200px;padding:6px 8px;font-size:10px}
+  #legend .mut{display:none}
+}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><symbol id="i-layout-dashboard" viewBox="0 0 24 24"><rect width="7" height="9" x="3" y="3" rx="1" /> <rect width="7" height="5" x="14" y="3" rx="1" /> <rect width="7" height="9" x="14" y="12" rx="1" /> <rect width="7" height="5" x="3" y="16" rx="1" /></symbol><symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /> <circle cx="12" cy="12" r="6" /> <circle cx="12" cy="12" r="2" /></symbol><symbol id="i-route" viewBox="0 0 24 24"><circle cx="6" cy="19" r="3" /> <path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15" /> <circle cx="18" cy="5" r="3" /></symbol><symbol id="i-sliders-horizontal" viewBox="0 0 24 24"><path d="M10 5H3" /> <path d="M12 19H3" /> <path d="M14 3v4" /> <path d="M16 17v4" /> <path d="M21 12h-9" /> <path d="M21 19h-5" /> <path d="M21 5h-7" /> <path d="M8 10v4" /> <path d="M8 12H3" /></symbol><symbol id="i-building-2" viewBox="0 0 24 24"><path d="M10 12h4" /> <path d="M10 8h4" /> <path d="M14 21v-3a2 2 0 0 0-4 0v3" /> <path d="M6 10H4a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-2" /> <path d="M6 21V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v16" /></symbol><symbol id="i-zap" viewBox="0 0 24 24"><path d="M15.914 4a1.5 1.5 0 00-2.474-1.561l-9 9A1.5 1.5 0 005.5 14h4.002a.5.5 0 01.471.666L8.086 20a1.5 1.5 0 002.475 1.56l9-9A1.5 1.5 0 0018.5 10h-3.997a.5.5 0 01-.472-.667z" /></symbol><symbol id="i-leaf" viewBox="0 0 24 24"><path d="M11 20a10 10 0 0010-10 25.9 25.9 0 00-1.04-7.281 1 1 0 00-1.755-.325C15.833 5.5 13 5.5 9.8 6.1A7 7 0 0011 20" /> <path d="M2 21a5 5 0 012.911-4.544C7.613 15.212 8.351 15.24 11 13" /></symbol><symbol id="i-scan" viewBox="0 0 24 24"><path d="M3 7V5a2 2 0 0 1 2-2h2" /> <path d="M17 3h2a2 2 0 0 1 2 2v2" /> <path d="M21 17v2a2 2 0 0 1-2 2h-2" /> <path d="M7 21H5a2 2 0 0 1-2-2v-2" /></symbol><symbol id="i-layers" viewBox="0 0 24 24"><path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z" /> <path d="M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12" /> <path d="M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17" /></symbol><symbol id="i-rotate-3d" viewBox="0 0 24 24"><path d="m15.194 13.707 3.814 1.86-1.86 3.814" /> <path d="M16.47214 7.52786 A 5 10 0 1 0 13 21.79796" /> <path d="M21.79796 11 A 10 5 0 1 0 19 15.57071" /></symbol><symbol id="i-tag" viewBox="0 0 24 24"><path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z" /> <circle cx="7.5" cy="7.5" r=".5" fill="currentColor" /></symbol><symbol id="i-sparkles" viewBox="0 0 24 24"><path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z" /> <path d="M20 2v4" /> <path d="M22 4h-4" /> <circle cx="4" cy="20" r="2" /></symbol><symbol id="i-moon" viewBox="0 0 24 24"><path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401" /></symbol><symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4" /> <path d="M12 2v2" /> <path d="M12 20v2" /> <path d="m4.93 4.93 1.41 1.41" /> <path d="m17.66 17.66 1.41 1.41" /> <path d="M2 12h2" /> <path d="M20 12h2" /> <path d="m6.34 17.66-1.41 1.41" /> <path d="m19.07 4.93-1.41 1.41" /></symbol><symbol id="i-plug" viewBox="0 0 24 24"><path d="M12 22v-5" /> <path d="M15 8V2" /> <path d="M17 8a1 1 0 0 1 1 1v4a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V9a1 1 0 0 1 1-1z" /> <path d="M9 8V2" /></symbol><symbol id="i-coins" viewBox="0 0 24 24"><path d="M13.744 17.736a6 6 0 1 1-7.48-7.48" /> <path d="M15 6h1v4" /> <path d="m6.134 14.768.866-.5 2 3.464" /> <circle cx="16" cy="8" r="6" /></symbol><symbol id="i-factory" viewBox="0 0 24 24"><path d="M12 16h.01" /> <path d="M16 16h.01" /> <path d="M3 19a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8.5a.5.5 0 0 0-.769-.422l-4.462 2.844A.5.5 0 0 1 15 10.5v-2a.5.5 0 0 0-.769-.422L9.77 10.922A.5.5 0 0 1 9 10.5V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2z" /> <path d="M8 16h.01" /></symbol><symbol id="i-flame" viewBox="0 0 24 24"><path d="M12 3q1 4 4 6.5t3 5.5a1 1 0 0 1-14 0 5 5 0 0 1 1-3 1 1 0 0 0 5 0c0-2-1.5-3-1.5-5q0-2 2.5-4" /></symbol><symbol id="i-sigma" viewBox="0 0 24 24"><path d="M18 7V5a1 1 0 0 0-1-1H6.5a.5.5 0 0 0-.4.8l4.5 6a2 2 0 0 1 0 2.4l-4.5 6a.5.5 0 0 0 .4.8H17a1 1 0 0 0 1-1v-2" /></symbol><symbol id="i-snowflake" viewBox="0 0 24 24"><path d="m10 20-1.25-2.5L6 18" /> <path d="M10 4 8.75 6.5 6 6" /> <path d="m14 20 1.25-2.5L18 18" /> <path d="m14 4 1.25 2.5L18 6" /> <path d="m17 21-3-6h-4" /> <path d="m17 3-3 6 1.5 3" /> <path d="M2 12h6.5L10 9" /> <path d="m20 10-1.5 2 1.5 2" /> <path d="M22 12h-6.5L14 15" /> <path d="m4 10 1.5 2L4 14" /> <path d="m7 21 3-6-1.5-3" /> <path d="m7 3 3 6h4" /></symbol><symbol id="i-server" viewBox="0 0 24 24"><rect width="20" height="8" x="2" y="2" rx="2" ry="2" /> <rect width="20" height="8" x="2" y="14" rx="2" ry="2" /> <line x1="6" x2="6.01" y1="6" y2="6" /> <line x1="6" x2="6.01" y1="18" y2="18" /></symbol><symbol id="i-lightbulb" viewBox="0 0 24 24"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5" /> <path d="M9 18h6" /> <path d="M10 22h4" /></symbol><symbol id="i-droplets" viewBox="0 0 24 24"><path d="M7 16.3c2.2 0 4-1.83 4-4.05 0-1.16-.57-2.26-1.71-3.19S7.29 6.75 7 5.3c-.29 1.45-1.14 2.84-2.29 3.76S3 11.1 3 12.25c0 2.22 1.8 4.05 4 4.05z" /> <path d="M12.56 6.6A10.97 10.97 0 0 0 14 3.02c.5 2.5 2 4.9 4 6.5s3 3.5 3 5.5a6.98 6.98 0 0 1-11.91 4.97" /></symbol><symbol id="i-badge-check" viewBox="0 0 24 24"><path d="M3.85 8.62a4 4 0 0 1 4.78-4.77 4 4 0 0 1 6.74 0 4 4 0 0 1 4.78 4.78 4 4 0 0 1 0 6.74 4 4 0 0 1-4.77 4.78 4 4 0 0 1-6.75 0 4 4 0 0 1-4.78-4.77 4 4 0 0 1 0-6.76Z" /> <path d="m16 9-5.5 5.5L8 12" /></symbol><symbol id="i-calendar" viewBox="0 0 24 24"><path d="M8 2v3" /> <path d="M16 2v3" /> <rect x="3" y="3" width="18" height="18" rx="2" /> <path d="M3 9h18" /></symbol><symbol id="i-trending-down" viewBox="0 0 24 24"><path d="M16 17h6v-6" /> <path d="m22 17-8.5-8.5-5 5L2 7" /></symbol><symbol id="i-fuel" viewBox="0 0 24 24"><path d="M14 13h2a2 2 0 0 1 2 2v2a2 2 0 0 0 4 0v-6.998a2 2 0 0 0-.59-1.42L18 5" /> <path d="M14 21V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v16" /> <path d="M2 21h13" /> <path d="M3 9h11" /></symbol><symbol id="i-panel-right-close" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2" /> <path d="M15 3v18" /> <path d="m8 9 3 3-3 3" /></symbol><symbol id="i-panel-right-open" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2" /> <path d="M15 3v18" /> <path d="m10 15-3-3 3-3" /></symbol><symbol id="i-panel-bottom-close" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2" /> <path d="M3 15h18" /> <path d="m15 8-3 3-3-3" /></symbol><symbol id="i-panel-bottom-open" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2" /> <path d="M3 15h18" /> <path d="m9 10 3-3 3 3" /></symbol><symbol id="i-triangle-alert" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3" /> <path d="M12 9v4" /> <path d="M12 17h.01" /></symbol></svg>
+<header id="top">
+  <div>
+    <h1>Net Zero Digital Twin</h1>
+    <p data-en="Demo Tower, simulated monthly data Jan 2020 – Sep 2026" data-th="Demo Tower, ข้อมูลสมมติรายเดือน ม.ค. 2020 – ก.ย. 2026"></p>
+  </div>
+  <div class="sp"></div>
+  <span class="badge" data-en="Simulated data for demonstration" data-th="ข้อมูลจำลองเพื่อสาธิต"></span>
+  <div class="seg" id="langSeg" role="group" aria-label="Language / ภาษา">
+    <button id="lEn" aria-pressed="true">EN</button>
+    <button id="lTh" aria-pressed="false">ไทย</button>
+  </div>
+  <button class="ib" id="btnTheme" data-aen="Switch light / dark theme" data-ath="สลับธีมสว่าง/มืด"></button>
+</header>
+
+<div id="main">
+  <section id="stage">
+    <canvas id="gl" data-aen="3D model of the building" data-ath="แบบจำลองอาคาร 3 มิติ" role="img"></canvas>
+    <div id="tags"></div>
+    <div id="tools">
+      <div class="seg" role="group" data-aen="Colour mode" data-ath="โหมดแสดงผลสี">
+        <button id="mEnergy" aria-pressed="true" data-aen="Energy" data-ath="พลังงาน"><svg class="ic" aria-hidden="true"><use href="#i-zap"/></svg><span class="lbl" data-en="Energy" data-th="พลังงาน"></span></button>
+        <button id="mCarbon" aria-pressed="false" data-aen="Carbon" data-ath="คาร์บอน"><svg class="ic" aria-hidden="true"><use href="#i-leaf"/></svg><span class="lbl" data-en="Carbon" data-th="คาร์บอน"></span></button>
+      </div>
+      <button class="chip" id="cXray" aria-pressed="false" data-aen="X-ray" data-ath="X-ray"><svg class="ic" aria-hidden="true"><use href="#i-scan"/></svg><span class="lbl" data-en="X-ray" data-th="X-ray"></span></button>
+      <button class="chip" id="cExplode" aria-pressed="false" data-aen="Explode" data-ath="แยกชั้น"><svg class="ic" aria-hidden="true"><use href="#i-layers"/></svg><span class="lbl" data-en="Explode" data-th="แยกชั้น"></span></button>
+      <button class="chip" id="cRotate" aria-pressed="true" data-aen="Rotate" data-ath="หมุน"><svg class="ic" aria-hidden="true"><use href="#i-rotate-3d"/></svg><span class="lbl" data-en="Rotate" data-th="หมุน"></span></button>
+      <button class="chip" id="cLabels" aria-pressed="true" data-aen="Labels" data-ath="ป้ายกำกับ"><svg class="ic" aria-hidden="true"><use href="#i-tag"/></svg><span class="lbl" data-en="Labels" data-th="ป้ายกำกับ"></span></button>
+      <button class="chip" id="cScn" aria-pressed="false" data-aen="After measures" data-ath="หลังปรับปรุง"><svg class="ic" aria-hidden="true"><use href="#i-sparkles"/></svg><span class="lbl" data-en="After measures" data-th="หลังปรับปรุง"></span></button>
+    </div>
+    <div id="legend"></div>
+    <button class="pbtn" id="panelBtn" aria-controls="panel"></button>
+    <div id="tip"></div>
+    <div id="fallback"><div id="fbtxt"></div></div>
+  </section>
+
+  <aside id="panel">
+    <div id="tabs" role="tablist">
+      <button class="tab" role="tab" data-tab="overview" aria-selected="true" data-aen="Overview" data-ath="ภาพรวม"><svg class="ic" aria-hidden="true"><use href="#i-layout-dashboard"/></svg><span class="lbl" data-en="Overview" data-th="ภาพรวม"></span></button>
+      <button class="tab" role="tab" data-tab="zeb" aria-selected="false" data-aen="ZEB 57" data-ath="ZEB 57"><svg class="ic" aria-hidden="true"><use href="#i-target"/></svg><span class="lbl" data-en="ZEB 57" data-th="ZEB 57"></span></button>
+      <button class="tab" role="tab" data-tab="netzero" aria-selected="false" data-aen="Net Zero" data-ath="Net Zero"><svg class="ic" aria-hidden="true"><use href="#i-route"/></svg><span class="lbl" data-en="Net Zero" data-th="Net Zero"></span></button>
+      <button class="tab" role="tab" data-tab="scenario" aria-selected="false" data-aen="Scenario" data-ath="Scenario"><svg class="ic" aria-hidden="true"><use href="#i-sliders-horizontal"/></svg><span class="lbl" data-en="Scenario" data-th="Scenario"></span></button>
+      <button class="tab" role="tab" data-tab="floors" aria-selected="false" data-aen="Floors" data-ath="รายชั้น"><svg class="ic" aria-hidden="true"><use href="#i-building-2"/></svg><span class="lbl" data-en="Floors" data-th="รายชั้น"></span></button>
+    </div>
+    <div id="body"></div>
+  </aside>
+</div>
+
+<footer id="time">
+  <button id="play"><svg viewBox="0 0 16 16"><path d="M3 1.5v13l11-6.5z"/></svg></button>
+  <div id="rangeWrap">
+    <input id="slider" type="range" min="0" max="80" step="1" value="80">
+    <div id="ticks"></div>
+    <div id="yrs"></div>
+  </div>
+  <div id="mlabel"></div>
+  <div id="ev"></div>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" crossorigin="anonymous"></script>
+<script>
+(function(){
+'use strict';
+/* ====================================================== DATA (assumed, simulated) */
+var D={"meta":{"areaSec":39800,"gfa":44600,"n":81,"start":"2020-01","zeb":57,"efByYear":{"2020":0.475,"2021":0.475,"2022":0.475,"2023":0.475,"2024":0.475,"2025":0.475,"2026":0.475},"tariff":{"2020":3.85,"2021":3.95,"2022":4.75,"2023":4.85,"2024":4.4,"2025":4.25,"2026":4.2},"gwp":{"r134a":1300,"r410a":1923.5},"dslEf":2.979,"efGrid":0.475,"efSource":"TGO CFO 2569","mTh":["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."],"mEn":["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"],"kwpPerGroup":10},"year":[2020,2020,2020,2020,2020,2020,2020,2020,2020,2020,2020,2020,2021,2021,2021,2021,2021,2021,2021,2021,2021,2021,2021,2021,2022,2022,2022,2022,2022,2022,2022,2022,2022,2022,2022,2022,2023,2023,2023,2023,2023,2023,2023,2023,2023,2023,2023,2023,2024,2024,2024,2024,2024,2024,2024,2024,2024,2024,2024,2024,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2026,2026,2026,2026,2026,2026,2026,2026,2026],"month":[1,2,3,4,5,6,7,8,9,10,11,12,1,2,3,4,5,6,7,8,9,10,11,12,1,2,3,4,5,6,7,8,9,10,11,12,1,2,3,4,5,6,7,8,9,10,11,12,1,2,3,4,5,6,7,8,9,10,11,12,1,2,3,4,5,6,7,8,9,10,11,12,1,2,3,4,5,6,7,8,9],"days":[31,29,31,30,31,30,31,31,30,31,30,31,31,28,31,30,31,30,31,31,30,31,30,31,31,28,31,30,31,30,31,31,30,31,30,31,31,28,31,30,31,30,31,31,30,31,30,31,31,29,31,30,31,30,31,31,30,31,30,31,31,28,31,30,31,30,31,31,30,31,30,31,31,28,31,30,31,30,31,31,30],"b":{"total":[376264,363386,383692,298036,302150,306898,331003,336176,330042,340382,319550,298599,289064,276457,345977,324715,316446,288680,280395,276997,296833,331687,319641,335166,322994,310281,363646,374926,390746,364506,366330,371889,346420,356113,337342,334466,349744,323351,389235,392471,400985,371343,382121,388073,371515,379493,361845,350410,365935,354779,408226,410742,414406,393706,404277,401790,386654,387881,361329,368946,363884,338960,394592,386161,409815,386629,386565,385296,370605,381988,358377,360125,369519,333471,401111,397938,402457,383939,398958,392657,388653],"pv":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,13926,27497,27969,27093,28891,29077,30908,32347,30561,32171,35142,29557,29966,30008,26899,23981,25975,27933,30801,27793,32285,30855,35313,30853,27550,27342,28761,25718,29026,25408,27498,27491,30772,31355,46441,46404,43198,39043,41410,38861,38538,41143,46334,46777,45619,56148,44631,46630,39735,43726,43067,39689],"grid":[376264,363386,383692,298036,302150,306898,331003,336176,330042,340382,319550,298599,289064,276457,345977,324715,316446,288680,280395,276997,296833,331687,319641,335166,322994,310281,363646,374926,390746,350580,338833,343921,319328,327222,308265,303558,317397,292791,357064,357329,371427,341377,352113,361175,347534,353518,333912,319610,338141,322494,377370,375429,383552,366156,376936,373029,360935,358855,335921,341448,336392,308188,363237,339720,363411,343431,347522,343886,331744,343450,317234,313792,322742,287852,344963,353308,355827,344204,355233,349590,348964],"cost":[1439971,1406892,1493172,1162324,1152500,1173485,1277484,1312333,1278542,1328498,1206248,1146483,1147500,1094948,1340760,1296745,1254280,1134965,1120825,1075216,1166495,1321744,1267328,1320929,1531864,1470393,1742297,1775480,1868625,1630502,1629242,1673509,1524385,1552959,1456424,1451991,1529369,1408408,1694892,1737252,1796183,1651772,1707709,1739294,1688697,1696047,1617606,1545744,1462406,1401778,1650592,1642597,1692005,1604563,1657669,1634616,1546981,1577015,1465605,1499968,1418716,1318387,1543047,1454038,1556567,1451310,1489009,1464857,1394995,1457968,1349511,1350550,1350793,1227969,1459999,1452519,1478998,1454135,1470263,1475269,1485914],"users":[3310,3341,2665,1323,1360,1727,2060,2082,2193,2265,2369,1825,1667,1835,2006,1744,1520,1393,1199,1150,1617,2096,2226,2398,2230,2414,2445,2426,2557,2675,2650,2772,2773,2808,2749,2732,2808,2835,2895,2762,2927,2916,2917,3020,2995,3010,3082,2874,3119,3157,3104,2917,3037,3113,3062,3082,3080,3107,3155,2986,3074,3080,3084,2906,3096,3192,3122,3161,3108,3170,3096,3044,3265,3153,3219,3025,3168,3148,3225,3168,3234],"occ":[0.99,1.0,0.797,0.397,0.408,0.516,0.616,0.624,0.657,0.677,0.709,0.546,0.499,0.549,0.602,0.523,0.455,0.417,0.358,0.344,0.484,0.628,0.667,0.718,0.668,0.722,0.731,0.726,0.765,0.802,0.793,0.83,0.83,0.84,0.823,0.818,0.84,0.848,0.866,0.827,0.876,0.872,0.873,0.904,0.897,0.902,0.923,0.86,0.934,0.944,0.929,0.873,0.909,0.932,0.916,0.923,0.922,0.93,0.944,0.893,0.92,0.921,0.923,0.869,0.927,0.956,0.935,0.946,0.93,0.949,0.927,0.912,0.977,0.943,0.963,0.905,0.948,0.942,0.965,0.948,0.968],"kwp":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,280,280,280,280,280,280,280,280,280,280,280,280,280,280,280,280,280,280,280,280,280,280,280,280,280,280,280,280,280,280,280,280,280,280,420,420,420,420,420,420,420,420,420,420,420,420,420,420,420,420,420,420],"ef":[0.475,0.475,0.475,0.475,0.475,0.475,0.475,0.475,0.475,0.475,0.475,0.475,0.475,0.475,0.475,0.475,0.475,0.475,0.475,0.475,0.475,0.475,0.475,0.475,0.475,0.475,0.475,0.475,0.475,0.475,0.475,0.475,0.475,0.475,0.475,0.475,0.475,0.475,0.475,0.475,0.475,0.475,0.475,0.475,0.475,0.475,0.475,0.475,0.475,0.475,0.475,0.475,0.475,0.475,0.475,0.475,0.475,0.475,0.475,0.475,0.475,0.475,0.475,0.475,0.475,0.475,0.475,0.475,0.475,0.475,0.475,0.475,0.475,0.475,0.475,0.475,0.475,0.475,0.475,0.475,0.475],"s2":[178.725,172.608,182.254,141.567,143.521,145.777,157.226,159.684,156.77,161.681,151.786,141.834,137.306,131.317,164.339,154.24,150.312,137.123,133.187,131.573,140.996,157.551,151.829,159.204,153.422,147.384,172.732,178.09,185.604,166.526,160.946,163.362,151.681,155.43,146.426,144.19,150.764,139.076,169.605,169.731,176.428,162.154,167.254,171.558,165.079,167.921,158.608,151.815,160.617,153.185,179.251,178.329,182.187,173.924,179.045,177.189,171.444,170.456,159.563,162.188,159.786,146.389,172.537,161.367,172.62,163.13,165.073,163.346,157.578,163.139,150.686,149.051,153.303,136.73,163.857,167.821,169.018,163.497,168.735,166.055,165.758],"s1":[6.741,11.471,8.913,9.522,6.43,5.982,4.622,6.73,5.515,5.753,11.976,7.737,8.426,7.505,8.03,8.243,3.953,102.991,10.941,7.708,8.225,4.913,4.092,7.985,3.805,11.089,13.266,8.536,8.429,15.09,12.991,6.491,10.623,10.142,8.225,9.473,11.166,3.924,12.5,7.709,7.646,5.384,10.248,9.559,11.438,8.477,10.417,8.233,8.85,6.176,49.23,6.705,10.815,9.068,6.526,9.889,13.402,5.793,12.671,6.081,4.208,6.455,6.831,7.359,10.585,6.773,9.586,8.041,12.492,9.981,57.487,3.702,3.684,4.177,9.383,9.373,8.865,8.608,9.82,4.758,4.32],"s1ref":[6.455,11.177,8.619,9.229,6.13,5.68,4.288,6.43,5.199,5.471,11.672,7.434,8.136,7.249,7.766,7.936,3.658,102.701,10.661,7.409,7.915,4.573,3.796,7.693,3.502,10.765,12.915,8.226,8.167,14.793,9.385,6.217,10.283,9.854,7.945,9.143,10.867,3.654,12.202,5.538,7.369,5.082,10.011,9.245,11.135,8.16,10.129,7.925,8.576,5.9,48.93,6.407,10.517,8.739,6.235,9.58,8.33,5.492,12.364,5.824,3.924,6.131,6.541,7.045,10.277,6.548,9.32,7.76,12.211,9.694,57.199,3.424,3.403,3.926,9.039,9.043,8.547,8.313,9.544,4.402,4.045],"s1dsl":[0.286,0.294,0.294,0.293,0.301,0.302,0.335,0.3,0.316,0.282,0.304,0.303,0.291,0.256,0.264,0.307,0.295,0.29,0.28,0.298,0.31,0.34,0.296,0.292,0.303,0.324,0.351,0.31,0.262,0.297,3.606,0.274,0.34,0.289,0.28,0.329,0.299,0.27,0.298,2.17,0.277,0.302,0.237,0.314,0.303,0.317,0.288,0.307,0.274,0.275,0.3,0.298,0.297,0.33,0.291,0.308,5.072,0.301,0.307,0.256,0.284,0.324,0.29,0.314,0.309,0.225,0.266,0.282,0.281,0.287,0.287,0.278,0.282,0.251,0.344,0.33,0.318,0.295,0.276,0.355,0.275],"r134":[3.2,6.9,3.7,4.7,3.4,3.1,1.2,3.0,1.6,2.2,6.0,4.6,5.0,4.5,4.5,4.6,1.9,78.5,6.9,2.6,3.2,1.3,0.7,4.6,1.8,6.0,7.5,4.5,1.9,6.8,5.7,2.3,5.9,1.9,3.5,3.1,6.0,2.5,6.3,3.2,4.1,1.3,4.3,5.0,7.3,4.9,4.1,3.7,4.4,3.4,2.9,3.7,5.5,4.6,3.1,5.4,2.9,2.3,5.9,2.5,1.7,2.3,2.7,4.2,5.2,2.6,3.9,4.0,8.2,3.4,42.4,1.5,0.7,1.8,5.3,6.0,5.6,3.4,5.2,2.3,1.7],"r410":[1.2,1.1,2.0,1.7,0.9,0.9,1.4,1.3,1.6,1.3,2.0,0.7,0.9,0.7,1.0,1.0,0.6,0.3,0.9,2.1,2.0,1.5,1.5,0.9,0.6,1.5,1.6,1.3,3.0,3.1,1.0,1.7,1.4,3.8,1.7,2.7,1.6,0.2,2.1,0.7,1.1,1.8,2.3,1.5,0.9,0.9,2.5,1.6,1.5,0.8,23.5,0.9,1.7,1.4,1.1,1.3,2.3,1.3,2.4,1.4,0.9,1.6,1.6,0.8,1.8,1.6,2.2,1.4,0.8,2.8,1.1,0.7,1.3,0.8,1.1,0.6,0.7,2.0,1.4,0.7,1.0],"dslL":[96,99,99,98,101,101,112,101,106,95,102,102,98,86,89,103,99,97,94,100,104,114,99,98,102,109,118,104,88,100,1211,92,114,97,94,111,100,91,100,729,93,101,79,105,102,106,97,103,92,92,101,100,100,111,98,103,1703,101,103,86,95,109,98,105,104,76,89,95,94,96,96,93,95,84,115,111,107,99,93,119,92],"sys":{"chiller":[84079,85287,104498,75510,73078,71854,77111,78667,78736,79960,67426,56637,52187,54846,87915,84587,77636,63436,57365,54832,64601,74427,67224,69977,64338,64982,89159,104915,106034,89583,85461,92234,86257,85954,77344,70808,78230,77349,109086,120770,116972,99968,101843,104361,98377,97406,89550,77705,84554,85368,117571,128804,123700,110620,112186,109827,105175,99847,85451,86561,78679,79658,102238,106684,113217,99357,93389,94090,88784,89080,78535,74204,78497,74751,103759,114100,109308,101312,101971,98602,99451],"ahu":[49937,49121,52676,38298,37333,38661,43031,43294,42879,44124,40917,35609,33427,34053,46143,43079,39452,34615,31986,31122,36420,42291,39535,41061,39197,38930,49008,51544,53938,48252,47910,50160,47549,49078,46251,43675,47324,44861,55474,57238,56815,53733,54214,54667,52477,52989,49736,47034,49599,48845,58061,61238,60063,56310,59472,57436,55227,54477,49362,50694,49266,46050,58710,57284,60045,56290,54901,55515,53361,53061,49295,48798,50465,44125,55112,56784,56027,52247,53877,53451,52746],"it":[89007,83635,86844,80687,83443,83503,86145,87114,84811,87028,84669,86493,86957,78456,87603,82618,86587,84061,86515,86549,84987,89726,88219,91260,89333,83640,91393,90359,94292,91216,94485,95869,90841,95250,92195,94531,97305,86385,95974,93410,97931,93738,97113,98583,94089,98038,95300,98289,99652,95060,100930,96566,100264,98403,101381,102089,99406,101131,97287,101984,102648,93113,102639,99215,104156,101433,105406,102888,100041,106480,102338,105963,106150,95575,106913,102057,105762,102877,107926,108412,106285],"lt":[44596,41949,41342,31144,32327,33544,36847,37937,36334,38712,37280,35692,34823,32305,36932,33601,34245,32197,31449,31607,32710,37165,36173,39271,39270,35856,39544,37424,40061,39867,40385,33399,24205,25395,24073,25967,25806,23462,25916,24240,26155,25025,25767,26469,25549,26368,25585,25600,26827,25585,26252,25029,26458,25885,26415,27306,25932,26459,25488,26264,27121,24141,25950,24766,26781,26554,26876,27027,26249,27414,25670,26685,27045,22814,26013,23919,25703,24848,26122,25293,25168],"plug":[48292,46338,41875,28248,30108,31963,35960,37162,36778,37022,37755,33854,33079,31619,36965,32758,31017,28839,28047,28063,31784,36046,37178,40195,38299,37409,40429,38729,41542,40770,41551,43493,42472,43492,42131,42722,44472,39711,44714,42190,44011,43097,45648,45649,44686,46048,43754,44619,45971,44021,46202,43227,45739,45143,45772,45483,44152,46965,46314,45418,46596,42196,45484,42132,46340,44696,46443,46138,44628,46619,45155,45514,47280,42353,49201,44463,45928,45375,49040,47112,46835],"lift":[16329,15392,14095,9100,9475,10351,11882,12010,11744,12515,12491,11083,10496,10123,11687,10406,9886,9201,8961,8780,9786,12129,11940,12881,12615,11964,13060,12635,13357,13656,14018,14211,14062,14568,13730,14280,14124,13050,14746,13798,15176,14350,14850,14891,14535,14967,15270,14562,15495,14798,15542,14064,15302,15078,15239,15434,14855,15171,14979,15014,15204,13934,15536,14311,15328,15459,15504,15680,14797,15599,15080,15354,15926,14069,15845,14494,15599,14971,15566,15659,15324],"park":[15922,15031,15876,14240,15295,14987,15721,15500,14901,15817,14990,15586,15285,13821,15631,15151,15309,14739,14874,15308,14902,15567,15414,15468,15588,14245,15730,14822,15907,15382,16078,16336,15397,16037,15467,15959,15937,14496,16221,15270,16386,15593,16075,15633,15535,15875,15685,16179,16337,15061,16093,15581,15669,15511,15981,16198,15490,16252,15574,16214,16520,14809,16281,15707,16033,15484,15952,16173,15865,15997,15672,15838,15948,14718,16029,15417,16520,15621,16157,16093,15727],"other":[28103,26635,26485,20810,21091,22035,24307,24494,23858,25204,24022,23645,22810,21233,23101,22515,22313,21592,21198,20736,21644,24335,23957,25053,24354,23255,25323,24498,25615,25780,26441,26187,25638,26340,26151,26524,26547,24037,27104,25555,27539,25839,26611,27823,26266,27802,26966,26423,27499,26041,27576,26233,27212,26757,27831,28018,26417,27579,26874,26797,27850,25058,27753,26062,27914,27357,28093,27785,26880,27738,26632,27769,28209,25066,28239,26705,27610,26688,28299,28035,27117]}},"floors":[{"id":"B2","area":2400,"use":"ที่จอดรถ + ห้อง Chiller plant","ue":"Parking + Chiller plant","cap":0,"kind":"park","ac":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"lt":[867,816,804,606,629,652,717,738,707,753,725,694,677,628,718,653,666,626,612,615,636,723,703,764,764,697,769,728,779,775,785,649,471,494,468,505,502,456,504,471,509,487,501,515,497,513,498,498,522,498,511,487,515,503,514,531,504,515,496,511,527,469,505,482,521,516,523,526,510,533,499,519,526,444,506,465,500,483,508,492,489],"eq":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"ot":[7961,7515,7938,7120,7647,7494,7860,7750,7451,7908,7495,7793,7642,6911,7816,7575,7655,7370,7437,7654,7451,7784,7707,7734,7794,7123,7865,7411,7954,7691,8039,8168,7698,8018,7734,7980,7968,7248,8111,7635,8193,7796,8037,7816,7768,7937,7842,8089,8169,7530,8047,7790,7835,7755,7991,8099,7745,8126,7787,8107,8260,7404,8140,7853,8017,7742,7976,8086,7932,7999,7836,7919,7974,7359,8015,7708,8260,7810,8079,8046,7863],"users":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"s1":[4.1918,9.0135,4.7544,6.0516,4.4812,4.0175,1.5457,3.9004,2.1121,2.9134,7.7787,5.9957,6.4428,5.8806,5.9135,5.9662,2.4409,102.0673,8.9227,3.3418,4.1291,1.7293,0.8456,6.0299,2.3922,7.7923,9.7531,5.8076,2.4651,8.8902,7.4031,3.0387,7.6164,2.5234,4.5828,4.0277,7.7899,3.2875,8.2195,4.1353,5.2655,1.6748,5.6397,6.4471,9.4851,6.3974,5.3094,4.7999,5.6833,4.4151,3.7058,4.7559,7.1682,5.9866,4.0264,7.0032,3.8303,2.9754,7.6605,3.208,2.1694,3.0041,3.5143,5.4594,6.7489,3.4441,5.0753,5.1599,10.6981,4.3857,55.1081,2.0135,0.9564,2.3267,6.8695,7.8544,7.2592,4.4776,6.8018,3.0332,2.2146]},{"id":"B1","area":2400,"use":"ที่จอดรถ + เครื่องปั่นไฟ","ue":"Parking + Genset","cap":0,"kind":"park","ac":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"lt":[867,816,804,606,629,652,717,738,707,753,725,694,677,628,718,653,666,626,612,615,636,723,703,764,764,697,769,728,779,775,785,649,471,494,468,505,502,456,504,471,509,487,501,515,497,513,498,498,522,498,511,487,515,503,514,531,504,515,496,511,527,469,505,482,521,516,523,526,510,533,499,519,526,444,506,465,500,483,508,492,489],"eq":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"ot":[7961,7515,7938,7120,7647,7494,7860,7750,7451,7908,7495,7793,7642,6911,7816,7575,7655,7370,7437,7654,7451,7784,7707,7734,7794,7123,7865,7411,7954,7691,8039,8168,7698,8018,7734,7980,7968,7248,8111,7635,8193,7796,8037,7816,7768,7937,7842,8089,8169,7530,8047,7790,7835,7755,7991,8099,7745,8126,7787,8107,8260,7404,8140,7853,8017,7742,7976,8086,7932,7999,7836,7919,7974,7359,8015,7708,8260,7810,8079,8046,7863],"users":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"s1":[0.2861,0.2935,0.2939,0.293,0.3008,0.3023,0.3346,0.2996,0.3162,0.2819,0.3038,0.3029,0.2907,0.2556,0.2642,0.3068,0.295,0.2904,0.2801,0.2984,0.3099,0.3405,0.2961,0.2923,0.3029,0.3242,0.3514,0.3099,0.2625,0.2973,3.6062,0.2739,0.3398,0.2886,0.2799,0.3295,0.2988,0.2701,0.2984,2.1704,0.2767,0.3016,0.2365,0.3142,0.3032,0.3172,0.288,0.3073,0.2738,0.2754,0.2998,0.298,0.2972,0.3295,0.2909,0.3081,5.072,0.3012,0.3072,0.2562,0.2843,0.3237,0.2905,0.3141,0.3087,0.225,0.2663,0.2816,0.2812,0.2868,0.2872,0.278,0.2816,0.2509,0.3436,0.3305,0.3182,0.2954,0.2756,0.3554,0.2749]},{"id":"F1","area":2600,"use":"Lobby + สาขา","ue":"Lobby + Branch","cap":120,"kind":"lobby","ac":[10413,10443,12212,8842,8579,8587,9335,9476,9449,9641,8418,7167,6652,6907,10416,9919,9097,7618,6942,6678,7849,9069,8295,8627,8044,8074,10735,12156,12429,10709,10362,11063,10396,10491,9603,8895,9755,9495,12786,13831,13503,11942,12125,12356,11721,11685,10822,9692,10423,10428,13646,14766,14278,12970,13337,12996,12463,11990,10474,10664,9941,9767,12505,12740,13462,12093,11522,11624,11044,11044,9932,9557,10020,9236,12344,13277,12846,11931,12109,11814,11825],"lt":[3490,3283,3235,2437,2530,2625,2883,2969,2843,3029,2917,2793,2725,2528,2890,2629,2680,2519,2461,2473,2560,2908,2831,3073,3073,2806,3094,2928,3135,3120,3160,2613,1894,1987,1884,2032,2019,1836,2028,1897,2047,1958,2016,2071,1999,2063,2002,2003,2099,2002,2054,1958,2070,2025,2067,2137,2029,2070,1994,2055,2122,1889,2031,1938,2096,2078,2103,2115,2054,2145,2009,2088,2116,1785,2036,1872,2011,1944,2044,1979,1969],"eq":[1662,1595,1441,972,1036,1100,1237,1279,1266,1274,1299,1165,1138,1088,1272,1127,1067,992,965,966,1094,1240,1279,1383,1318,1287,1391,1333,1430,1403,1430,1497,1462,1497,1450,1470,1530,1367,1539,1452,1514,1483,1571,1571,1538,1585,1506,1535,1582,1515,1590,1488,1574,1553,1575,1565,1519,1616,1594,1563,1603,1452,1565,1450,1595,1538,1598,1588,1536,1604,1554,1566,1627,1457,1693,1530,1580,1561,1688,1621,1612],"ot":[3970,3761,3722,2896,2938,3077,3401,3427,3339,3529,3372,3301,3182,2967,3238,3141,3107,3001,2945,2881,3016,3408,3355,3514,3418,3262,3553,3437,3596,3622,3715,3685,3610,3710,3673,3730,3731,3382,3814,3595,3878,3641,3750,3912,3700,3910,3804,3721,3878,3674,3889,3689,3837,3773,3918,3946,3725,3884,3787,3777,3920,3531,3912,3670,3930,3858,3957,3918,3785,3911,3756,3911,3978,3534,3981,3757,3894,3762,3985,3951,3824],"users":[119,120,96,48,49,62,74,75,79,81,85,66,60,66,72,63,55,50,43,41,58,75,80,86,80,87,88,87,92,96,95,100,100,101,99,98,101,102,104,99,105,105,105,108,108,108,111,103,112,113,112,105,109,112,110,111,111,112,113,107,110,111,111,104,111,115,112,114,112,114,111,109,117,113,116,109,114,113,116,114,116],"s1":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]},{"id":"F2","area":2800,"use":"พื้นที่เชิงพาณิชย์","ue":"Commercial space","cap":150,"kind":"retail","ac":[10746,10778,12603,9126,8853,8862,9634,9780,9752,9950,8688,7397,6865,7129,10750,10237,9389,7862,7165,6892,8101,9359,8561,8904,8302,8332,11079,12546,12828,11053,10695,11418,10729,10828,9911,9180,10068,9800,13196,14274,13935,12325,12514,12752,12096,12060,11169,10002,10757,10762,14083,15239,14735,13385,13765,13412,12862,12375,10810,11006,10259,10080,12906,13148,13893,12481,11891,11996,11398,11398,10250,9863,10341,9532,12739,13703,13258,12313,12497,12193,12204],"lt":[3469,3263,3216,2423,2515,2609,2866,2951,2826,3011,2900,2776,2709,2513,2873,2614,2664,2504,2446,2459,2544,2891,2814,3055,3055,2789,3076,2911,3116,3101,3141,2598,1883,1975,1873,2020,2007,1825,2016,1886,2035,1947,2004,2059,1987,2051,1990,1991,2087,1990,2042,1947,2058,2013,2055,2124,2017,2058,1983,2043,2110,1878,2019,1926,2083,2066,2091,2102,2042,2132,1997,2076,2104,1775,2023,1861,1999,1933,2032,1967,1958],"eq":[2077,1993,1801,1215,1295,1375,1547,1599,1582,1592,1624,1456,1423,1360,1590,1409,1334,1241,1206,1207,1367,1550,1599,1729,1647,1609,1739,1666,1787,1754,1787,1871,1827,1871,1812,1838,1913,1708,1923,1815,1893,1854,1964,1964,1922,1981,1882,1919,1977,1894,1987,1859,1967,1942,1969,1956,1899,2020,1992,1954,2004,1815,1956,1812,1993,1923,1998,1985,1920,2005,1942,1958,2034,1822,2116,1913,1976,1952,2109,2027,2015],"ot":[1291,1222,1193,901,917,967,1075,1084,1057,1118,1076,1037,997,934,1029,985,968,930,912,892,943,1081,1064,1120,1090,1040,1133,1096,1148,1160,1190,1184,1162,1196,1174,1197,1195,1087,1226,1154,1250,1175,1211,1254,1193,1255,1231,1199,1254,1190,1258,1183,1241,1220,1261,1271,1204,1251,1223,1221,1261,1139,1264,1182,1266,1249,1275,1268,1220,1265,1216,1261,1287,1142,1287,1208,1260,1216,1284,1276,1238],"users":[149,150,120,60,61,77,92,94,99,102,106,82,75,82,90,78,68,62,54,52,73,94,100,108,100,108,110,109,115,120,119,124,125,126,123,123,126,127,130,124,131,131,131,136,135,135,138,129,140,142,139,131,136,140,137,138,138,140,142,134,138,138,139,130,139,143,140,142,140,142,139,137,147,141,145,136,142,141,145,142,145],"s1":[0.7544,0.7212,1.2882,1.0593,0.5495,0.5542,0.914,0.8432,1.029,0.8527,1.2979,0.4796,0.5643,0.4562,0.6174,0.6565,0.4056,0.2112,0.5795,1.3559,1.2621,0.9479,0.9835,0.5543,0.3699,0.991,1.0539,0.8061,1.9005,1.9676,0.6606,1.0596,0.889,2.4434,1.1208,1.7051,1.0258,0.1223,1.3274,0.4676,0.7011,1.1358,1.4571,0.9325,0.5499,0.5874,1.6067,1.0418,0.9644,0.495,15.0747,0.5505,1.1164,0.9174,0.7362,0.8591,1.5,0.8387,1.5677,0.8721,0.5847,1.0425,1.0089,0.5286,1.1759,1.0346,1.4149,0.8666,0.5041,1.7694,0.6971,0.4702,0.8154,0.5331,0.7233,0.3961,0.4292,1.2784,0.9142,0.4564,0.6101]},{"id":"F3","area":2800,"use":"พื้นที่เชิงพาณิชย์","ue":"Commercial space","cap":180,"kind":"retail","ac":[10746,10778,12603,9126,8853,8862,9634,9780,9752,9950,8688,7397,6865,7129,10750,10237,9389,7862,7165,6892,8101,9359,8561,8904,8302,8332,11079,12546,12828,11053,10695,11418,10729,10828,9911,9180,10068,9800,13196,14274,13935,12325,12514,12752,12096,12060,11169,10002,10757,10762,14083,15239,14735,13385,13765,13412,12862,12375,10810,11006,10259,10080,12906,13148,13893,12481,11891,11996,11398,11398,10250,9863,10341,9532,12739,13703,13258,12313,12497,12193,12204],"lt":[3469,3263,3216,2423,2515,2609,2866,2951,2826,3011,2900,2776,2709,2513,2873,2614,2664,2504,2446,2459,2544,2891,2814,3055,3055,2789,3076,2911,3116,3101,3141,2598,1883,1975,1873,2020,2007,1825,2016,1886,2035,1947,2004,2059,1987,2051,1990,1991,2087,1990,2042,1947,2058,2013,2055,2124,2017,2058,1983,2043,2110,1878,2019,1926,2083,2066,2091,2102,2042,2132,1997,2076,2104,1775,2023,1861,1999,1933,2032,1967,1958],"eq":[2493,2392,2162,1458,1554,1650,1856,1918,1898,1911,1949,1747,1707,1632,1908,1691,1601,1489,1448,1449,1641,1861,1919,2075,1977,1931,2087,1999,2144,2104,2145,2245,2192,2245,2175,2205,2296,2050,2308,2178,2272,2225,2356,2356,2307,2377,2258,2303,2373,2272,2385,2231,2361,2330,2363,2348,2279,2424,2391,2344,2405,2178,2348,2175,2392,2307,2397,2382,2304,2406,2331,2349,2440,2186,2540,2295,2371,2342,2531,2432,2418],"ot":[1351,1279,1245,934,952,1005,1119,1128,1100,1165,1123,1078,1036,972,1072,1023,1005,964,945,924,979,1126,1108,1168,1137,1084,1181,1143,1198,1210,1242,1237,1214,1250,1225,1250,1248,1136,1281,1206,1306,1228,1266,1310,1247,1311,1288,1253,1312,1245,1315,1235,1297,1276,1318,1329,1259,1307,1278,1276,1318,1191,1321,1235,1323,1306,1333,1326,1274,1322,1272,1318,1346,1194,1345,1261,1318,1271,1341,1334,1294],"users":[178,180,144,71,73,93,111,112,118,122,128,98,90,99,108,94,82,75,65,62,87,113,120,129,120,130,132,131,138,144,143,149,149,151,148,147,151,153,156,149,158,157,157,163,161,162,166,155,168,170,167,157,164,168,165,166,166,167,170,161,166,166,166,157,167,172,168,170,167,171,167,164,176,170,173,163,171,170,174,171,174],"s1":[0.7544,0.7212,1.2882,1.0593,0.5495,0.5542,0.914,0.8432,1.029,0.8527,1.2979,0.4796,0.5643,0.4562,0.6174,0.6565,0.4056,0.2112,0.5795,1.3559,1.2621,0.9479,0.9835,0.5543,0.3699,0.991,1.0539,0.8061,1.9005,1.9676,0.6606,1.0596,0.889,2.4434,1.1208,1.7051,1.0258,0.1223,1.3274,0.4676,0.7011,1.1358,1.4571,0.9325,0.5499,0.5874,1.6067,1.0418,0.9644,0.495,15.0747,0.5505,1.1164,0.9174,0.7362,0.8591,1.5,0.8387,1.5677,0.8721,0.5847,1.0425,1.0089,0.5286,1.1759,1.0346,1.4149,0.8666,0.5041,1.7694,0.6971,0.4702,0.8154,0.5331,0.7233,0.3961,0.4292,1.2784,0.9142,0.4564,0.6101]},{"id":"F4","area":2800,"use":"โรงอาหาร + พื้นที่ส่วนกลาง","ue":"Canteen + Common area","cap":220,"kind":"canteen","ac":[12148,12183,14247,10316,10008,10018,10890,11055,11024,11248,9821,8362,7761,8058,12152,11572,10614,8888,8099,7791,9157,10580,9677,10065,9385,9419,12524,14182,14501,12494,12090,12907,12129,12240,11203,10377,11381,11078,14917,16136,15753,13932,14146,14415,13674,13633,12626,11307,12160,12166,15920,17226,16657,15131,15560,15162,14540,13989,12220,12442,11598,11395,14589,14863,15705,14109,13442,13561,12885,12884,11587,11150,11690,10776,14401,15490,14987,13919,14127,13783,13796],"lt":[3180,2991,2948,2221,2305,2392,2627,2705,2591,2760,2658,2545,2483,2304,2633,2396,2442,2296,2242,2254,2332,2650,2579,2800,2800,2557,2820,2669,2857,2843,2880,2381,1726,1811,1717,1852,1840,1673,1848,1728,1865,1784,1837,1887,1822,1880,1824,1825,1913,1824,1872,1785,1887,1846,1884,1947,1849,1887,1817,1873,1934,1721,1850,1766,1910,1893,1916,1927,1872,1955,1830,1903,1928,1627,1855,1706,1833,1772,1863,1804,1795],"eq":[3047,2923,2642,1782,1899,2016,2269,2344,2320,2336,2382,2136,2087,1995,2332,2067,1957,1819,1769,1770,2005,2274,2346,2536,2416,2360,2551,2443,2621,2572,2621,2744,2679,2744,2658,2695,2806,2505,2821,2662,2777,2719,2880,2880,2819,2905,2760,2815,2900,2777,2915,2727,2886,2848,2888,2869,2785,2963,2922,2865,2940,2662,2870,2658,2924,2820,2930,2911,2816,2941,2849,2871,2983,2672,3104,2805,2898,2863,3094,2972,2955],"ot":[12653,11990,11891,9292,9424,9857,10886,10971,10687,11293,10778,10577,10199,9503,10356,10068,9967,9635,9457,9251,9672,10904,10735,11236,10925,10430,11359,10989,11493,11573,11870,11764,11522,11840,11736,11913,11919,10799,12177,11479,12378,11617,11966,12494,11807,12487,12131,11876,12369,11716,12403,11781,12238,12035,12506,12593,11881,12395,12083,12051,12514,11266,12480,11713,12545,12306,12627,12498,12081,12475,11980,12483,12689,11273,12700,11997,12420,12002,12718,12606,12198],"users":[218,220,175,87,90,114,136,137,144,149,156,120,110,121,132,115,100,92,79,76,107,138,147,158,147,159,161,160,168,176,174,183,183,185,181,180,185,187,191,182,193,192,192,199,197,198,203,189,205,208,204,192,200,205,202,203,203,205,208,197,202,203,203,191,204,210,206,208,205,209,204,201,215,207,212,199,209,207,212,209,213],"s1":[0.7544,0.7212,1.2882,1.0593,0.5495,0.5542,0.914,0.8432,1.029,0.8527,1.2979,0.4796,0.5643,0.4562,0.6174,0.6565,0.4056,0.2112,0.5795,1.3559,1.2621,0.9479,0.9835,0.5543,0.3699,0.991,1.0539,0.8061,1.9005,1.9676,0.6606,1.0596,0.889,2.4434,1.1208,1.7051,1.0258,0.1223,1.3274,0.4676,0.7011,1.1358,1.4571,0.9325,0.5499,0.5874,1.6067,1.0418,0.9644,0.495,15.0747,0.5505,1.1164,0.9174,0.7362,0.8591,1.5,0.8387,1.5677,0.8721,0.5847,1.0425,1.0089,0.5286,1.1759,1.0346,1.4149,0.8666,0.5041,1.7694,0.6971,0.4702,0.8154,0.5331,0.7233,0.3961,0.4292,1.2784,0.9142,0.4564,0.6101]},{"id":"F5","area":1800,"use":"Data room + UPS","ue":"Data room + UPS","cap":40,"kind":"data","ac":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"lt":[1487,1398,1378,1038,1078,1118,1228,1265,1211,1291,1243,1190,1161,1077,1231,1120,1142,1073,1048,1054,1090,1239,1206,1309,1309,1195,1318,1248,1336,1329,1346,1113,807,847,803,866,860,782,864,808,872,834,859,882,852,879,853,853,894,853,875,834,882,863,881,910,865,882,850,876,904,805,865,826,893,885,896,901,875,914,856,890,902,761,867,797,857,828,871,843,839],"eq":[89561,84166,87324,81011,83789,83869,86557,87540,85233,87452,85102,86882,87336,78819,88027,82994,86943,84391,86836,86871,85352,90140,88645,91721,89772,84069,91856,90803,94768,91683,94962,96368,91328,95749,92678,95021,97815,86840,96486,93894,98436,94232,97637,99106,94601,98566,95802,98801,100180,95565,101460,97062,100789,98921,101906,102611,99913,101670,97818,102505,103182,93597,103161,99698,104688,101945,105939,103417,100553,107014,102856,106485,106692,96061,107478,102567,106288,103397,108489,108953,106822],"ot":[1119,1058,1017,740,758,805,902,910,887,941,913,863,827,780,869,817,797,761,745,729,779,910,896,948,924,880,960,928,975,988,1013,1013,996,1027,998,1023,1019,930,1050,987,1072,1010,1042,1070,1025,1072,1062,1029,1081,1027,1084,1010,1069,1052,1081,1091,1038,1073,1052,1051,1080,980,1088,1013,1085,1077,1095,1093,1046,1089,1049,1083,1110,984,1108,1033,1087,1047,1101,1098,1067],"users":[40,40,32,16,16,21,25,25,26,27,28,22,20,22,24,21,18,17,14,14,19,25,27,29,27,29,29,29,31,32,32,33,33,34,33,33,34,34,35,33,35,35,35,36,36,36,37,34,37,38,37,35,36,37,37,37,37,37,38,36,37,37,37,35,37,38,37,38,37,38,37,36,39,38,39,36,38,38,39,38,39],"s1":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]},{"id":"F6","area":1800,"use":"สำนักงาน","ue":"Office","cap":131,"kind":"office","ac":[4355,4368,5108,3699,3588,3592,3904,3963,3952,4033,3521,2998,2782,2889,4357,4149,3805,3186,2904,2793,3283,3793,3469,3609,3365,3377,4490,5085,5199,4479,4334,4628,4348,4388,4017,3720,4080,3972,5348,5785,5648,4995,5072,5168,4902,4888,4527,4054,4360,4362,5708,6176,5972,5425,5579,5436,5213,5015,4381,4461,4158,4085,5231,5329,5631,5058,4819,4862,4619,4619,4154,3997,4191,3863,5163,5553,5373,4990,5065,4941,4946],"lt":[1440,1355,1335,1006,1044,1083,1190,1225,1173,1250,1204,1153,1125,1043,1193,1085,1106,1040,1016,1021,1056,1200,1168,1268,1268,1158,1277,1209,1294,1288,1304,1079,782,820,777,839,833,758,837,783,845,808,832,855,825,852,826,827,866,826,848,808,854,836,853,882,838,854,823,848,876,780,838,800,865,858,868,873,848,885,829,862,873,737,840,772,830,802,844,817,813],"eq":[907,870,787,531,566,600,675,698,691,695,709,636,621,594,694,615,583,542,527,527,597,677,698,755,719,703,759,727,780,766,780,817,798,817,791,802,835,746,840,792,827,809,857,857,839,865,822,838,863,827,868,812,859,848,860,854,829,882,870,853,875,793,854,791,870,840,872,867,838,876,848,855,888,796,924,835,863,852,921,885,880],"ot":[1180,1115,1069,774,793,843,946,954,931,987,960,904,866,818,912,856,834,795,778,762,816,955,940,996,971,925,1008,975,1024,1038,1065,1066,1048,1081,1049,1076,1071,979,1104,1038,1129,1063,1097,1126,1078,1128,1119,1083,1138,1082,1142,1062,1125,1108,1137,1148,1093,1129,1107,1106,1137,1031,1145,1066,1142,1134,1152,1151,1101,1147,1105,1140,1169,1036,1167,1087,1144,1103,1159,1156,1124],"users":[130,131,104,52,53,68,81,82,86,89,93,72,65,72,79,68,60,55,47,45,63,82,87,94,87,95,96,95,100,105,104,109,109,110,108,107,110,111,113,108,115,114,114,118,118,118,121,113,122,124,122,114,119,122,120,121,121,122,124,117,120,121,121,114,121,125,122,124,122,124,121,119,128,124,126,119,124,123,126,124,127],"s1":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]},{"id":"F7","area":1800,"use":"สำนักงาน","ue":"Office","cap":152,"kind":"office","ac":[5082,5097,5960,4316,4187,4191,4556,4625,4612,4706,4109,3498,3247,3371,5084,4841,4440,3718,3388,3260,3831,4426,4048,4211,3926,3941,5240,5933,6066,5227,5058,5400,5074,5121,4687,4341,4761,4634,6240,6750,6590,5829,5918,6031,5721,5703,5282,4730,5087,5090,6660,7207,6969,6330,6510,6343,6083,5852,5112,5205,4852,4767,6103,6218,6570,5902,5623,5673,5390,5390,4848,4664,4890,4508,6025,6480,6270,5823,5910,5766,5772],"lt":[1624,1528,1506,1134,1177,1222,1342,1382,1323,1410,1358,1300,1268,1177,1345,1224,1247,1173,1145,1151,1191,1354,1317,1430,1430,1306,1440,1363,1459,1452,1471,1216,882,925,877,946,940,855,944,883,953,911,938,964,931,960,932,932,977,932,956,912,964,943,962,995,944,964,928,957,988,879,945,902,975,967,979,984,956,998,935,972,985,831,947,871,936,905,951,921,917],"eq":[1516,1454,1314,887,945,1003,1129,1166,1154,1162,1185,1062,1038,992,1160,1028,973,905,880,881,997,1131,1167,1261,1202,1174,1269,1215,1304,1279,1304,1365,1333,1365,1322,1341,1396,1246,1403,1324,1381,1353,1433,1433,1402,1445,1373,1400,1443,1382,1450,1357,1435,1417,1436,1427,1386,1474,1453,1425,1462,1324,1427,1322,1454,1403,1458,1448,1401,1463,1417,1428,1484,1329,1544,1395,1441,1424,1539,1479,1470],"ot":[1240,1172,1121,808,828,882,990,999,974,1033,1006,945,905,855,955,895,871,829,811,794,852,1000,984,1044,1018,969,1056,1022,1074,1089,1117,1119,1101,1135,1100,1129,1123,1027,1159,1089,1185,1116,1152,1181,1132,1183,1175,1137,1196,1137,1199,1114,1182,1164,1194,1205,1148,1186,1162,1162,1193,1083,1203,1119,1199,1191,1209,1209,1156,1205,1161,1197,1228,1088,1225,1141,1202,1158,1216,1214,1181],"users":[151,152,121,60,62,79,94,95,100,103,108,83,76,83,91,79,69,63,54,52,74,95,101,109,101,110,111,110,116,122,120,126,126,128,125,124,128,129,132,126,133,133,133,137,136,137,140,131,142,144,141,133,138,142,139,140,140,141,143,136,140,140,140,132,141,145,142,144,141,144,141,139,149,143,146,138,144,143,147,144,147],"s1":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]},{"id":"F8","area":1800,"use":"สำนักงาน","ue":"Office","cap":165,"kind":"office","ac":[5512,5528,6464,4681,4541,4545,4941,5016,5002,5103,4456,3794,3521,3656,5513,5251,4815,4033,3675,3535,4155,4800,4391,4567,4258,4274,5682,6435,6579,5669,5485,5856,5503,5553,5083,4708,5164,5026,6768,7321,7147,6321,6418,6540,6204,6185,5728,5130,5517,5520,7223,7816,7558,6865,7060,6879,6597,6347,5544,5645,5262,5170,6619,6743,7126,6401,6099,6153,5846,5846,5257,5059,5304,4889,6534,7028,6800,6315,6410,6253,6259],"lt":[1733,1630,1606,1210,1256,1303,1432,1474,1412,1504,1449,1387,1353,1255,1435,1306,1331,1251,1222,1228,1271,1444,1406,1526,1526,1393,1537,1454,1557,1549,1569,1298,941,987,935,1009,1003,912,1007,942,1016,972,1001,1029,993,1025,994,995,1042,994,1020,973,1028,1006,1026,1061,1008,1028,990,1021,1054,938,1008,962,1041,1032,1044,1050,1020,1065,998,1037,1051,887,1011,929,999,966,1015,983,978],"eq":[1942,1864,1684,1136,1211,1286,1446,1495,1479,1489,1518,1362,1330,1272,1487,1317,1247,1160,1128,1129,1278,1450,1495,1617,1540,1505,1626,1558,1671,1640,1671,1749,1708,1749,1694,1718,1789,1597,1798,1697,1770,1733,1836,1836,1797,1852,1760,1795,1849,1770,1858,1739,1840,1816,1841,1829,1776,1889,1863,1827,1874,1697,1829,1695,1864,1798,1868,1856,1795,1875,1816,1830,1902,1703,1979,1788,1847,1825,1972,1895,1884],"ot":[1301,1229,1173,841,863,920,1034,1043,1018,1080,1052,986,943,893,999,933,907,863,844,827,888,1044,1028,1091,1065,1013,1105,1069,1123,1139,1169,1171,1153,1189,1151,1182,1176,1075,1214,1140,1241,1169,1207,1236,1186,1238,1232,1191,1253,1192,1257,1166,1239,1219,1250,1262,1203,1242,1218,1218,1249,1134,1261,1172,1256,1248,1267,1267,1211,1263,1217,1253,1287,1140,1284,1194,1260,1213,1274,1272,1238],"users":[163,165,132,65,67,85,102,103,108,112,117,90,82,91,99,86,75,69,59,57,80,104,110,119,110,119,121,120,126,132,131,137,137,139,136,135,139,140,143,136,145,144,144,149,148,149,152,142,154,156,153,144,150,154,151,152,152,153,156,147,152,152,152,143,153,158,154,156,154,157,153,150,161,156,159,149,156,155,159,156,160],"s1":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]},{"id":"F9","area":1800,"use":"สำนักงาน","ue":"Office","cap":180,"kind":"office","ac":[6007,6025,7045,5101,4949,4954,5385,5467,5451,5562,4856,4135,3838,3985,6009,5723,5248,4395,4005,3853,4528,5232,4785,4977,4641,4658,6193,7013,7171,6178,5978,6383,5998,6053,5540,5132,5628,5478,7376,7979,7790,6890,6995,7128,6762,6741,6243,5591,6013,6016,7873,8519,8237,7483,7695,7498,7190,6918,6043,6152,5735,5635,7214,7350,7766,6977,6647,6706,6372,6371,5730,5514,5781,5329,7121,7660,7411,6883,6986,6816,6822],"lt":[1858,1748,1723,1298,1347,1398,1535,1581,1514,1613,1554,1487,1451,1346,1539,1400,1427,1342,1311,1317,1363,1549,1507,1636,1636,1494,1648,1560,1669,1661,1683,1392,1009,1058,1003,1082,1075,978,1080,1010,1090,1043,1074,1103,1065,1099,1066,1067,1118,1066,1094,1043,1103,1079,1101,1138,1081,1103,1062,1094,1130,1006,1081,1032,1116,1107,1120,1126,1094,1142,1070,1112,1127,951,1084,997,1071,1035,1089,1054,1049],"eq":[2493,2392,2162,1458,1554,1650,1856,1918,1898,1911,1949,1747,1707,1632,1908,1691,1601,1489,1448,1449,1641,1861,1919,2075,1977,1931,2087,1999,2144,2104,2145,2245,2192,2245,2175,2205,2296,2050,2308,2178,2272,2225,2356,2356,2307,2377,2258,2303,2373,2272,2385,2231,2361,2330,2363,2348,2279,2424,2391,2344,2405,2178,2348,2175,2392,2307,2397,2382,2304,2406,2331,2349,2440,2186,2540,2295,2371,2342,2531,2432,2418],"ot":[1361,1286,1225,875,898,958,1078,1088,1061,1126,1098,1027,982,930,1042,972,944,897,878,859,924,1089,1072,1139,1111,1058,1153,1116,1173,1190,1221,1224,1205,1243,1202,1234,1228,1124,1268,1191,1297,1222,1262,1291,1240,1294,1288,1245,1311,1247,1314,1218,1295,1275,1307,1320,1258,1298,1273,1273,1305,1186,1318,1225,1312,1306,1324,1325,1265,1321,1272,1310,1346,1192,1343,1248,1318,1269,1332,1330,1294],"users":[178,180,144,71,73,93,111,112,118,122,128,98,90,99,108,94,82,75,65,62,87,113,120,129,120,130,132,131,138,144,143,149,149,151,148,147,151,153,156,149,158,157,157,163,161,162,166,155,168,170,167,157,164,168,165,166,166,167,170,161,166,166,166,157,167,172,168,170,167,171,167,164,176,170,173,163,171,170,174,171,174],"s1":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]},{"id":"F10","area":1800,"use":"สำนักงาน","ue":"Office","cap":180,"kind":"office","ac":[6007,6025,7045,5101,4949,4954,5385,5467,5451,5562,4856,4135,3838,3985,6009,5723,5248,4395,4005,3853,4528,5232,4785,4977,4641,4658,6193,7013,7171,6178,5978,6383,5998,6053,5540,5132,5628,5478,7376,7979,7790,6890,6995,7128,6762,6741,6243,5591,6013,6016,7873,8519,8237,7483,7695,7498,7190,6918,6043,6152,5735,5635,7214,7350,7766,6977,6647,6706,6372,6371,5730,5514,5781,5329,7121,7660,7411,6883,6986,6816,6822],"lt":[1858,1748,1723,1298,1347,1398,1535,1581,1514,1613,1554,1487,1451,1346,1539,1400,1427,1342,1311,1317,1363,1549,1507,1636,1636,1494,1648,1560,1669,1661,1683,1392,1009,1058,1003,1082,1075,978,1080,1010,1090,1043,1074,1103,1065,1099,1066,1067,1118,1066,1094,1043,1103,1079,1101,1138,1081,1103,1062,1094,1130,1006,1081,1032,1116,1107,1120,1126,1094,1142,1070,1112,1127,951,1084,997,1071,1035,1089,1054,1049],"eq":[2493,2392,2162,1458,1554,1650,1856,1918,1898,1911,1949,1747,1707,1632,1908,1691,1601,1489,1448,1449,1641,1861,1919,2075,1977,1931,2087,1999,2144,2104,2145,2245,2192,2245,2175,2205,2296,2050,2308,2178,2272,2225,2356,2356,2307,2377,2258,2303,2373,2272,2385,2231,2361,2330,2363,2348,2279,2424,2391,2344,2405,2178,2348,2175,2392,2307,2397,2382,2304,2406,2331,2349,2440,2186,2540,2295,2371,2342,2531,2432,2418],"ot":[1422,1343,1278,909,933,997,1122,1132,1105,1173,1145,1068,1021,968,1085,1010,981,931,911,892,961,1134,1117,1187,1158,1102,1201,1162,1222,1240,1273,1276,1257,1297,1252,1287,1280,1172,1323,1242,1353,1275,1317,1346,1294,1349,1345,1299,1368,1301,1372,1270,1352,1331,1363,1377,1313,1354,1329,1329,1362,1238,1376,1278,1369,1363,1382,1383,1320,1378,1328,1367,1405,1244,1401,1302,1375,1324,1389,1388,1351],"users":[178,180,144,71,73,93,111,112,118,122,128,98,90,99,108,94,82,75,65,62,87,113,120,129,120,130,132,131,138,144,143,149,149,151,148,147,151,153,156,149,158,157,157,163,161,162,166,155,168,170,167,157,164,168,165,166,166,167,170,161,166,166,166,157,167,172,168,170,167,171,167,164,176,170,173,163,171,170,174,171,174],"s1":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]},{"id":"F11","area":1800,"use":"สำนักงาน","ue":"Office","cap":190,"kind":"office","ac":[6338,6356,7433,5382,5221,5226,5682,5768,5751,5868,5124,4362,4049,4204,6340,6037,5537,4637,4225,4065,4777,5520,5049,5251,4896,4914,6534,7399,7565,6518,6307,6734,6328,6386,5845,5414,5937,5779,7782,8418,8218,7269,7380,7520,7134,7112,6587,5899,6344,6347,8306,8987,8690,7894,8118,7910,7585,7298,6375,6491,6051,5945,7611,7754,8194,7361,7013,7075,6722,6722,6045,5817,6099,5622,7513,8081,7819,7262,7370,7191,7197],"lt":[1942,1827,1800,1356,1408,1461,1605,1652,1582,1686,1623,1554,1516,1407,1608,1463,1491,1402,1370,1376,1424,1618,1575,1710,1710,1561,1722,1630,1745,1736,1759,1454,1054,1106,1048,1131,1124,1022,1129,1056,1139,1090,1122,1153,1113,1148,1114,1115,1168,1114,1143,1090,1152,1127,1150,1189,1129,1152,1110,1144,1181,1051,1130,1078,1166,1156,1170,1177,1143,1194,1118,1162,1178,993,1133,1042,1119,1082,1138,1101,1096],"eq":[2894,2777,2510,1693,1804,1916,2155,2227,2204,2219,2263,2029,1983,1895,2215,1963,1859,1728,1681,1682,1905,2160,2228,2409,2295,2242,2423,2321,2490,2443,2490,2607,2545,2607,2525,2560,2665,2380,2680,2529,2638,2583,2736,2736,2678,2760,2622,2674,2755,2638,2769,2591,2741,2706,2743,2726,2646,2815,2776,2722,2793,2529,2726,2525,2777,2679,2783,2765,2675,2794,2706,2728,2834,2538,2949,2665,2753,2720,2939,2824,2807],"ot":[1482,1400,1330,942,968,1035,1166,1177,1148,1219,1191,1109,1060,1005,1128,1049,1017,965,944,924,997,1179,1161,1234,1205,1146,1250,1209,1272,1291,1325,1329,1309,1351,1303,1340,1333,1220,1377,1293,1410,1328,1372,1401,1348,1405,1402,1353,1425,1356,1429,1322,1409,1387,1419,1434,1368,1410,1384,1384,1418,1289,1433,1331,1426,1420,1439,1441,1375,1436,1384,1424,1464,1296,1460,1355,1433,1380,1447,1446,1408],"users":[188,190,151,75,77,98,117,118,125,129,135,104,95,104,114,99,86,79,68,65,92,119,127,136,127,137,139,138,145,152,151,158,158,160,156,155,160,161,165,157,166,166,166,172,170,171,175,163,177,179,177,166,173,177,174,175,175,177,179,170,175,175,175,165,176,182,178,180,177,180,176,173,186,179,183,172,180,179,183,180,184],"s1":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]},{"id":"F12","area":1800,"use":"สำนักงาน","ue":"Office","cap":215,"kind":"office","ac":[7164,7185,8402,6083,5902,5907,6422,6519,6501,6633,5791,4931,4576,4752,7166,6824,6259,5241,4776,4595,5400,6239,5707,5935,5534,5554,7386,8363,8551,7368,7129,7611,7152,7218,6607,6120,6711,6533,8796,9515,9290,8216,8342,8501,8064,8039,7445,6668,7171,7174,9388,10158,9823,8923,9176,8941,8574,8249,7206,7337,6839,6720,8603,8765,9261,8320,7927,7997,7598,7598,6833,6575,6893,6354,8492,9134,8838,8208,8331,8128,8135],"lt":[2151,2023,1994,1502,1559,1618,1777,1830,1753,1867,1798,1722,1680,1558,1781,1621,1652,1553,1517,1525,1578,1793,1745,1894,1894,1730,1907,1805,1932,1923,1948,1611,1168,1225,1161,1253,1245,1132,1250,1169,1262,1207,1243,1277,1232,1272,1234,1235,1294,1234,1266,1207,1276,1249,1274,1317,1251,1276,1229,1267,1308,1164,1252,1195,1292,1281,1296,1304,1266,1322,1238,1287,1305,1100,1255,1154,1240,1199,1260,1220,1214],"eq":[4019,3857,3485,2351,2506,2660,2993,3093,3061,3081,3142,2818,2753,2632,3077,2727,2582,2400,2334,2336,2645,3000,3094,3346,3188,3114,3365,3224,3458,3393,3458,3620,3535,3620,3507,3556,3702,3305,3722,3512,3663,3587,3799,3800,3719,3833,3642,3714,3826,3664,3846,3598,3807,3757,3810,3786,3675,3909,3855,3780,3878,3512,3786,3507,3857,3720,3866,3840,3715,3880,3758,3788,3935,3525,4095,3701,3823,3777,4082,3921,3898],"ot":[1543,1457,1382,976,1003,1073,1210,1221,1192,1265,1237,1150,1099,1043,1172,1087,1054,999,977,957,1033,1224,1205,1282,1252,1191,1298,1256,1321,1342,1377,1382,1361,1405,1354,1393,1385,1269,1432,1344,1466,1382,1427,1456,1401,1460,1458,1406,1483,1411,1487,1375,1465,1443,1476,1491,1423,1467,1440,1440,1474,1341,1491,1384,1483,1477,1497,1499,1430,1494,1440,1481,1523,1348,1519,1409,1491,1435,1505,1504,1465],"users":[213,215,171,85,88,111,132,134,141,146,152,117,107,118,129,112,98,90,77,74,104,135,143,154,144,155,157,156,165,172,170,178,178,181,177,176,181,182,186,178,188,188,188,194,193,194,198,185,201,203,200,188,195,200,197,198,198,200,203,192,198,198,199,187,199,205,201,203,200,204,199,196,210,203,207,195,204,203,208,204,208],"s1":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]},{"id":"F13","area":1800,"use":"สำนักงาน","ue":"Office","cap":249,"kind":"office","ac":[8320,8344,9758,7065,6855,6861,7459,7572,7550,7703,6726,5727,5315,5519,8323,7926,7269,6087,5547,5336,6272,7246,6628,6894,6428,6451,8578,9713,9931,8557,8280,8840,8307,8383,7673,7107,7795,7587,10216,11051,10789,9542,9688,9873,9365,9337,8647,7744,8329,8332,10904,11798,11408,10363,10657,10384,9958,9581,8369,8521,7943,7804,9992,10180,10757,9663,9206,9288,8825,8824,7936,7636,8006,7380,9863,10609,10264,9533,9675,9440,9449],"lt":[2444,2299,2265,1707,1771,1838,2019,2079,1991,2121,2043,1956,1908,1770,2024,1841,1877,1764,1723,1732,1792,2037,1982,2152,2152,1965,2167,2051,2195,2185,2213,1830,1326,1392,1319,1423,1414,1286,1420,1328,1433,1371,1412,1450,1400,1445,1402,1403,1470,1402,1439,1372,1450,1418,1448,1496,1421,1450,1397,1439,1486,1323,1422,1357,1468,1455,1473,1481,1438,1502,1407,1462,1482,1250,1425,1311,1408,1362,1431,1386,1379],"eq":[5862,5625,5083,3429,3655,3880,4365,4511,4464,4494,4583,4109,4015,3838,4487,3976,3765,3501,3405,3406,3858,4375,4513,4879,4649,4541,4908,4701,5043,4949,5044,5280,5156,5279,5114,5186,5398,4820,5428,5121,5342,5231,5541,5541,5424,5590,5311,5416,5580,5344,5608,5247,5552,5480,5556,5521,5359,5701,5622,5513,5656,5122,5521,5114,5625,5425,5638,5601,5417,5659,5481,5525,5739,5141,5972,5397,5575,5508,5953,5719,5685],"ot":[1603,1514,1434,1010,1038,1112,1254,1266,1235,1312,1283,1191,1138,1080,1215,1126,1090,1033,1010,989,1069,1269,1249,1330,1298,1235,1347,1303,1371,1392,1429,1434,1413,1459,1405,1446,1437,1317,1487,1396,1522,1435,1482,1512,1455,1516,1515,1460,1540,1466,1545,1427,1522,1499,1532,1548,1478,1523,1495,1496,1531,1392,1548,1437,1540,1535,1554,1557,1485,1552,1496,1538,1582,1401,1578,1463,1549,1491,1562,1562,1521],"users":[247,249,199,99,102,129,153,155,164,169,176,136,124,137,150,130,113,104,89,86,121,156,166,179,166,180,182,181,191,200,197,207,207,209,205,204,209,211,216,206,218,217,217,225,223,225,230,214,233,235,231,217,226,232,228,230,229,232,235,222,229,229,230,217,231,238,233,236,232,236,231,227,243,235,240,225,236,235,240,236,241],"s1":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]},{"id":"F14","area":1800,"use":"สำนักงาน","ue":"Office","cap":230,"kind":"office","ac":[7659,7682,8983,6504,6310,6316,6866,6970,6951,7092,6192,5272,4893,5081,7662,7296,6692,5604,5107,4912,5774,6671,6101,6346,5917,5939,7896,8942,9143,7878,7622,8138,7647,7717,7064,6543,7176,6985,9405,10173,9932,8784,8919,9089,8622,8595,7960,7129,7667,7671,10038,10861,10502,9540,9811,9559,9167,8820,7705,7844,7312,7184,9198,9371,9902,8895,8475,8550,8124,8124,7306,7030,7370,6794,9080,9766,9449,8776,8907,8690,8698],"lt":[2277,2141,2110,1590,1650,1712,1881,1937,1855,1976,1903,1822,1778,1649,1885,1715,1748,1644,1605,1613,1670,1897,1847,2005,2005,1830,2019,1910,2045,2035,2062,1705,1236,1296,1229,1326,1317,1198,1323,1237,1335,1277,1315,1351,1304,1346,1306,1307,1369,1306,1340,1278,1351,1321,1348,1394,1324,1351,1301,1341,1384,1232,1325,1264,1367,1356,1372,1380,1340,1399,1310,1362,1381,1165,1328,1221,1312,1268,1333,1291,1285],"eq":[4778,4584,4143,2795,2979,3162,3558,3677,3639,3663,3735,3349,3273,3128,3657,3241,3069,2853,2775,2776,3144,3566,3678,3977,3789,3701,4000,3832,4110,4033,4111,4303,4202,4303,4168,4227,4400,3929,4424,4174,4354,4264,4516,4516,4421,4556,4329,4414,4548,4355,4571,4277,4525,4466,4528,4500,4368,4646,4582,4493,4610,4175,4500,4168,4585,4422,4595,4565,4415,4612,4467,4503,4678,4190,4868,4399,4544,4489,4852,4661,4634],"ot":[1664,1571,1486,1044,1073,1150,1298,1310,1279,1358,1330,1232,1177,1118,1258,1164,1127,1068,1044,1022,1106,1314,1294,1378,1345,1279,1395,1350,1420,1443,1481,1487,1465,1513,1456,1499,1490,1365,1541,1447,1578,1488,1537,1567,1509,1571,1571,1514,1597,1521,1602,1479,1579,1554,1589,1605,1533,1579,1551,1551,1587,1444,1606,1490,1596,1592,1611,1616,1539,1609,1552,1595,1641,1453,1636,1516,1606,1546,1620,1620,1578],"users":[228,230,183,91,94,119,142,143,151,156,163,126,115,126,138,120,105,96,82,79,111,144,153,165,154,166,168,167,176,184,182,191,191,193,189,188,193,195,199,190,201,201,201,208,206,207,212,198,215,217,214,201,209,214,211,212,212,214,217,205,212,212,212,200,213,220,215,218,214,218,213,210,225,217,222,208,218,217,222,218,223],"s1":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]},{"id":"F15","area":1800,"use":"สำนักงาน","ue":"Office","cap":180,"kind":"office","ac":[6007,6025,7045,5101,4949,4954,5385,5467,5451,5562,4856,4135,3838,3985,6009,5723,5248,4395,4005,3853,4528,5232,4785,4977,4641,4658,6193,7013,7171,6178,5978,6383,5998,6053,5540,5132,5628,5478,7376,7979,7790,6890,6995,7128,6762,6741,6243,5591,6013,6016,7873,8519,8237,7483,7695,7498,7190,6918,6043,6152,5735,5635,7214,7350,7766,6977,6647,6706,6372,6371,5730,5514,5781,5329,7121,7660,7411,6883,6986,6816,6822],"lt":[1858,1748,1723,1298,1347,1398,1535,1581,1514,1613,1554,1487,1451,1346,1539,1400,1427,1342,1311,1317,1363,1549,1507,1636,1636,1494,1648,1560,1669,1661,1683,1392,1009,1058,1003,1082,1075,978,1080,1010,1090,1043,1074,1103,1065,1099,1066,1067,1118,1066,1094,1043,1103,1079,1101,1138,1081,1103,1062,1094,1130,1006,1081,1032,1116,1107,1120,1126,1094,1142,1070,1112,1127,951,1084,997,1071,1035,1089,1054,1049],"eq":[2493,2392,2162,1458,1554,1650,1856,1918,1898,1911,1949,1747,1707,1632,1908,1691,1601,1489,1448,1449,1641,1861,1919,2075,1977,1931,2087,1999,2144,2104,2145,2245,2192,2245,2175,2205,2296,2050,2308,2178,2272,2225,2356,2356,2307,2377,2258,2303,2373,2272,2385,2231,2361,2330,2363,2348,2279,2424,2391,2344,2405,2178,2348,2175,2392,2307,2397,2382,2304,2406,2331,2349,2440,2186,2540,2295,2371,2342,2531,2432,2418],"ot":[1724,1628,1539,1077,1109,1188,1342,1355,1322,1404,1376,1274,1216,1155,1302,1203,1164,1102,1077,1054,1142,1359,1338,1425,1392,1324,1443,1396,1470,1493,1532,1540,1517,1567,1507,1552,1542,1414,1596,1498,1634,1541,1592,1622,1563,1626,1628,1568,1655,1575,1660,1531,1635,1610,1645,1662,1588,1635,1606,1607,1643,1496,1663,1543,1653,1649,1669,1674,1594,1667,1608,1652,1700,1505,1695,1570,1664,1602,1678,1678,1635],"users":[178,180,144,71,73,93,111,112,118,122,128,98,90,99,108,94,82,75,65,62,87,113,120,129,120,130,132,131,138,144,143,149,149,151,148,147,151,153,156,149,158,157,157,163,161,162,166,155,168,170,167,157,164,168,165,166,166,167,170,161,166,166,166,157,167,172,168,170,167,171,167,164,176,170,173,163,171,170,174,171,174],"s1":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]},{"id":"F16","area":1800,"use":"สำนักงาน","ue":"Office","cap":170,"kind":"office","ac":[5677,5693,6658,4821,4677,4681,5089,5166,5152,5256,4589,3907,3627,3766,5679,5408,4960,4153,3785,3641,4279,4944,4522,4704,4386,4402,5853,6628,6776,5839,5650,6032,5668,5720,5235,4849,5318,5177,6971,7540,7362,6511,6610,6736,6390,6371,5900,5284,5683,5685,7440,8050,7784,7071,7271,7085,6795,6537,5711,5814,5420,5325,6818,6946,7339,6593,6281,6337,6021,6021,5415,5210,5463,5036,6730,7239,7004,6505,6602,6441,6447],"lt":[1775,1669,1645,1239,1287,1335,1466,1510,1446,1541,1484,1420,1386,1286,1470,1337,1363,1281,1252,1258,1302,1479,1440,1563,1563,1427,1574,1489,1594,1587,1607,1329,963,1011,958,1033,1027,934,1031,965,1041,996,1025,1053,1017,1049,1018,1019,1068,1018,1045,996,1053,1030,1051,1087,1032,1053,1014,1045,1079,961,1033,986,1066,1057,1070,1076,1045,1091,1022,1062,1076,908,1035,952,1023,989,1040,1007,1002],"eq":[2119,2033,1837,1239,1321,1402,1578,1630,1614,1624,1656,1485,1451,1387,1622,1437,1361,1265,1231,1231,1395,1581,1631,1764,1680,1641,1774,1699,1823,1789,1823,1908,1863,1908,1849,1874,1951,1742,1962,1851,1931,1891,2003,2003,1961,2020,1920,1958,2017,1931,2027,1897,2007,1981,2008,1996,1937,2061,2032,1993,2044,1851,1996,1849,2033,1961,2038,2024,1958,2045,1981,1997,2074,1858,2159,1951,2015,1991,2152,2067,2055],"ot":[1785,1685,1591,1111,1144,1227,1386,1399,1366,1451,1422,1315,1254,1193,1345,1241,1200,1136,1110,1087,1178,1404,1382,1473,1438,1368,1492,1443,1519,1544,1584,1592,1569,1621,1558,1605,1594,1462,1651,1549,1691,1594,1647,1677,1617,1682,1684,1622,1712,1630,1717,1583,1692,1666,1702,1720,1643,1691,1662,1663,1700,1547,1721,1596,1710,1706,1726,1732,1649,1725,1663,1708,1759,1557,1754,1624,1722,1657,1735,1736,1692],"users":[168,170,136,67,69,88,105,106,112,115,120,93,85,93,102,89,77,71,61,58,82,107,113,122,114,123,124,123,130,136,135,141,141,143,140,139,143,144,147,141,149,148,148,154,153,153,157,146,159,161,158,148,154,158,156,157,157,158,160,152,156,157,157,148,158,162,159,161,158,161,158,155,166,160,164,154,161,160,164,161,165],"s1":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]},{"id":"F17","area":1800,"use":"สำนักงาน","ue":"Office","cap":145,"kind":"office","ac":[4851,4865,5689,4119,3996,4000,4349,4414,4402,4491,3922,3339,3099,3218,4852,4621,4238,3549,3234,3111,3657,4225,3864,4019,3748,3761,5001,5663,5790,4989,4828,5154,4843,4888,4474,4144,4545,4424,5956,6443,6290,5563,5649,5756,5460,5444,5042,4515,4856,4858,6357,6879,6651,6042,6213,6054,5806,5586,4880,4968,4631,4550,5826,5935,6271,5634,5368,5415,5145,5145,4627,4452,4668,4303,5750,6185,5984,5558,5641,5504,5509],"lt":[1566,1473,1451,1093,1135,1178,1294,1332,1276,1359,1309,1253,1223,1134,1297,1180,1202,1130,1104,1110,1148,1305,1270,1379,1379,1259,1388,1314,1406,1400,1418,1173,850,892,845,912,906,824,910,851,918,879,905,929,897,926,898,899,942,898,922,879,929,909,927,959,910,929,895,922,952,848,911,870,940,932,944,949,922,962,901,937,950,801,913,840,902,872,917,888,884],"eq":[1305,1252,1132,763,814,864,972,1004,994,1001,1020,915,894,855,999,885,838,779,758,758,859,974,1005,1086,1035,1011,1093,1047,1123,1102,1123,1176,1148,1175,1139,1155,1202,1073,1209,1140,1189,1165,1234,1234,1208,1245,1183,1206,1242,1190,1249,1168,1236,1220,1237,1229,1193,1269,1252,1228,1259,1140,1229,1139,1252,1208,1255,1247,1206,1260,1220,1230,1278,1145,1330,1202,1241,1226,1325,1273,1266],"ot":[1845,1742,1643,1145,1179,1265,1430,1443,1409,1497,1468,1356,1293,1230,1388,1280,1237,1170,1143,1119,1214,1449,1426,1521,1485,1412,1540,1490,1569,1595,1636,1645,1621,1675,1608,1658,1647,1510,1705,1600,1747,1647,1702,1732,1671,1737,1741,1676,1770,1685,1775,1635,1749,1722,1758,1777,1698,1747,1717,1718,1756,1599,1778,1649,1767,1764,1784,1790,1704,1783,1719,1765,1818,1609,1812,1678,1780,1712,1793,1794,1748],"users":[144,145,116,58,59,75,89,90,95,98,103,79,72,80,87,76,66,60,52,50,70,91,97,104,97,105,106,105,111,116,115,120,120,122,119,119,122,123,126,120,127,127,127,131,130,131,134,125,135,137,135,127,132,135,133,134,134,135,137,130,133,134,134,126,134,139,136,137,135,138,134,132,142,137,140,131,137,137,140,137,140],"s1":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]},{"id":"F18","area":1800,"use":"สำนักงาน","ue":"Office","cap":131,"kind":"office","ac":[4355,4368,5108,3699,3588,3592,3904,3963,3952,4033,3521,2998,2782,2889,4357,4149,3805,3186,2904,2793,3283,3793,3469,3609,3365,3377,4490,5085,5199,4479,4334,4628,4348,4388,4017,3720,4080,3972,5348,5785,5648,4995,5072,5168,4902,4888,4527,4054,4360,4362,5708,6176,5972,5425,5579,5436,5213,5015,4381,4461,4158,4085,5231,5329,5631,5058,4819,4862,4619,4619,4154,3997,4191,3863,5163,5553,5373,4990,5065,4941,4946],"lt":[1440,1355,1335,1006,1044,1083,1190,1225,1173,1250,1204,1153,1125,1043,1193,1085,1106,1040,1016,1021,1056,1200,1168,1268,1268,1158,1277,1209,1294,1288,1304,1079,782,820,777,839,833,758,837,783,845,808,832,855,825,852,826,827,866,826,848,808,854,836,853,882,838,854,823,848,876,780,838,800,865,858,868,873,848,885,829,862,873,737,840,772,830,802,844,817,813],"eq":[907,870,787,531,566,600,675,698,691,695,709,636,621,594,694,615,583,542,527,527,597,677,698,755,719,703,759,727,780,766,780,817,798,817,791,802,835,746,840,792,827,809,857,857,839,865,822,838,863,827,868,812,859,848,860,854,829,882,870,853,875,793,854,791,870,840,872,867,838,876,848,855,888,796,924,835,863,852,921,885,880],"ot":[1905,1799,1695,1178,1214,1303,1474,1488,1453,1543,1515,1397,1332,1268,1431,1318,1273,1204,1176,1152,1251,1494,1470,1568,1532,1456,1588,1537,1618,1645,1688,1697,1673,1729,1659,1710,1699,1559,1760,1651,1803,1700,1757,1787,1724,1793,1797,1730,1827,1740,1832,1687,1805,1778,1815,1834,1753,1804,1773,1774,1812,1650,1836,1702,1823,1821,1841,1848,1759,1840,1775,1822,1877,1661,1871,1731,1838,1768,1851,1852,1805],"users":[130,131,104,52,53,68,81,82,86,89,93,72,65,72,79,68,60,55,47,45,63,82,87,94,87,95,96,95,100,105,104,109,109,110,108,107,110,111,113,108,115,114,114,118,118,118,121,113,122,124,122,114,119,122,120,121,121,122,124,117,120,121,121,114,121,125,122,124,122,124,121,119,128,124,126,119,124,123,126,124,127],"s1":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]},{"id":"F19","area":1800,"use":"สำนักงาน","ue":"Office","cap":200,"kind":"office","ac":[6668,6688,7820,5663,5494,5499,5978,6068,6051,6174,5391,4590,4260,4423,6670,6352,5826,4879,4446,4277,5026,5807,5312,5525,5151,5170,6875,7785,7959,6858,6636,7085,6658,6719,6150,5696,6247,6081,8188,8857,8647,7647,7765,7912,7506,7483,6930,6206,6675,6678,8739,9456,9143,8306,8541,8322,7981,7678,6708,6829,6366,6255,8008,8158,8621,7744,7378,7444,7072,7072,6360,6120,6417,5915,7905,8502,8226,7640,7754,7565,7573],"lt":[2026,1905,1878,1415,1468,1524,1674,1723,1650,1758,1693,1621,1582,1467,1678,1526,1555,1462,1428,1436,1486,1688,1643,1784,1784,1629,1796,1700,1820,1811,1834,1517,1099,1154,1093,1179,1172,1066,1177,1101,1188,1137,1170,1202,1160,1198,1162,1163,1219,1162,1192,1137,1202,1176,1200,1240,1178,1202,1158,1193,1232,1097,1179,1125,1216,1206,1221,1228,1192,1245,1166,1212,1228,1036,1182,1086,1167,1129,1187,1149,1143],"eq":[3324,3189,2882,1944,2072,2200,2475,2558,2531,2548,2598,2330,2277,2176,2544,2254,2135,1985,1930,1931,2187,2481,2559,2766,2636,2575,2782,2665,2859,2806,2860,2993,2923,2993,2900,2940,3061,2733,3077,2904,3029,2966,3142,3142,3075,3169,3011,3071,3164,3030,3180,2975,3148,3107,3150,3130,3039,3232,3187,3126,3207,2904,3130,2900,3189,3076,3196,3175,3071,3208,3108,3132,3254,2915,3386,3060,3161,3123,3375,3242,3223],"ot":[1966,1856,1747,1212,1249,1342,1518,1532,1496,1590,1561,1438,1371,1305,1475,1357,1310,1238,1210,1184,1287,1539,1515,1616,1579,1501,1637,1584,1668,1696,1740,1750,1726,1783,1710,1763,1751,1607,1814,1702,1859,1754,1812,1842,1778,1848,1854,1784,1884,1795,1890,1739,1862,1834,1871,1891,1808,1860,1828,1829,1869,1702,1894,1755,1880,1878,1899,1906,1814,1898,1831,1879,1936,1713,1930,1785,1895,1823,1908,1910,1862],"users":[198,200,159,79,82,103,123,125,131,135,142,109,100,110,120,105,91,83,72,69,97,126,133,144,134,144,146,145,153,160,159,166,166,168,165,164,168,170,173,165,175,174,175,181,179,180,185,172,187,189,186,175,182,186,183,185,184,186,189,179,184,184,185,174,185,191,187,189,186,190,185,182,195,189,193,181,190,188,193,190,194],"s1":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]},{"id":"F20","area":1800,"use":"ผู้บริหาร + ชั้นเครื่องจักร","ue":"Executive + Plant floor","cap":113,"kind":"exec","ac":[5961,5978,6991,5062,4911,4915,5344,5424,5409,5519,4819,4103,3808,3954,5963,5678,5208,4361,3974,3823,4493,5191,4748,4939,4605,4622,6145,6959,7115,6131,5932,6333,5951,6006,5497,5092,5584,5436,7319,7917,7730,6836,6941,7073,6710,6689,6195,5548,5967,5969,7812,8453,8173,7425,7635,7439,7134,6864,5996,6105,5691,5591,7159,7293,7706,6923,6596,6654,6322,6322,5686,5471,5736,5287,7066,7600,7354,6830,6932,6763,6769],"lt":[1775,1669,1645,1239,1287,1335,1466,1510,1446,1541,1484,1420,1386,1286,1470,1337,1363,1281,1252,1258,1302,1479,1440,1563,1563,1427,1574,1489,1594,1587,1607,1329,963,1011,958,1033,1027,934,1031,965,1041,996,1025,1053,1017,1049,1018,1019,1068,1018,1045,996,1053,1030,1051,1087,1032,1053,1014,1045,1079,961,1033,986,1066,1057,1070,1076,1045,1091,1022,1062,1076,908,1035,952,1023,989,1040,1007,1002],"eq":[1408,1351,1221,824,878,932,1049,1084,1073,1080,1101,987,965,922,1078,955,905,841,818,818,927,1051,1084,1172,1117,1091,1179,1129,1212,1189,1212,1268,1239,1268,1229,1246,1297,1158,1304,1230,1284,1257,1331,1331,1303,1343,1276,1301,1341,1284,1347,1261,1334,1317,1335,1326,1288,1370,1351,1325,1359,1231,1326,1229,1351,1304,1354,1346,1302,1360,1317,1327,1379,1235,1435,1297,1339,1323,1430,1374,1366],"ot":[2026,1913,1800,1246,1284,1380,1562,1577,1540,1636,1607,1479,1410,1342,1518,1396,1347,1272,1243,1217,1323,1584,1559,1664,1625,1545,1685,1630,1717,1746,1792,1803,1778,1837,1761,1816,1803,1655,1869,1753,1915,1807,1867,1898,1832,1904,1911,1838,1942,1849,1948,1791,1919,1889,1927,1948,1863,1916,1884,1885,1925,1754,1951,1808,1937,1935,1956,1964,1868,1956,1887,1936,1995,1765,1988,1839,1953,1879,1966,1968,1919],"users":[112,113,90,45,46,58,70,70,74,77,80,62,56,62,68,59,51,47,41,39,55,71,75,81,75,82,83,82,86,91,90,94,94,95,93,92,95,96,98,93,99,99,99,102,101,102,104,97,106,107,105,99,103,105,104,104,104,105,107,101,104,104,104,98,105,108,106,107,105,107,105,103,110,107,109,102,107,106,109,107,109],"s1":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]}],"events":[{"i":3,"t":"ล็อกดาวน์ COVID-19","te":"COVID-19 lockdown","k":"ctx"},{"i":17,"t":"ท่อสารทำความเย็นรั่ว (R-134a)","te":"Refrigerant leak (R-134a)","k":"s1"},{"i":29,"t":"ติดตั้ง Solar PV เฟส 1 (280 kWp)","te":"Solar PV phase 1 (280 kWp)","k":"pv"},{"i":32,"t":"เปลี่ยนเป็นหลอด LED ทั้งอาคาร","te":"Building-wide LED retrofit","k":"eff"},{"i":56,"t":"ไฟดับ 10 ชม. ใช้เครื่องปั่นไฟ","te":"10 h grid outage, genset running","k":"s1"},{"i":61,"t":"ปรับปรุง Chiller plant","te":"Chiller plant optimisation","k":"eff"},{"i":63,"t":"Solar PV เฟส 2 (+140 kWp)","te":"Solar PV phase 2 (+140 kWp)","k":"pv"},{"i":72,"t":"ปรับจูน BMS (Retro-commissioning)","te":"BMS retro-commissioning","k":"eff"}]};
+
+var $=function(s){return document.querySelector(s)};
+var N=D.meta.n,A=D.meta.areaSec,ZEB=D.meta.zeb,B=D.b,FL=D.floors,NF=FL.length,LAST=N-1;
+var nf=function(v,d){d=d||0;return Number(v).toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d})};
+var clamp=function(v,a,b){return Math.max(a,Math.min(b,v))};
+var sum=function(arr,a,b){var s=0;for(var i=a;i<=b;i++)s+=arr[i];return s};
+var CO2='CO\u2082';
+function ic(n,c){return '<svg class="ic" aria-hidden="true"'+(c?' style="color:'+c+'"':'')+'><use href="#i-'+n+'"/></svg>'}
+function isDark(){return getComputedStyle(document.documentElement).getPropertyValue('--is-dark').trim()==='1'}
+function themeIcon(){$('#btnTheme').innerHTML=ic(isDark()?'sun':'moon')}
+var reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* ---------- language (English is the default) */
+var LANG='en';
+function tr(en,th){return LANG==='th'?th:en}
+function uSec(){return tr('kWh/m\u00B2\u00B7yr','kWh/m\u00B2\u00B7ปี')}
+function uC(){return tr('kg'+CO2+'e/m\u00B2\u00B7yr','kg'+CO2+'e/m\u00B2\u00B7ปี')}
+function applyLang(){
+  document.documentElement.lang=LANG;
+  document.querySelectorAll('[data-en]').forEach(function(el){el.textContent=LANG==='th'?el.dataset.th:el.dataset.en});
+  document.querySelectorAll('[data-aen]').forEach(function(el){var v=LANG==='th'?el.dataset.ath:el.dataset.aen;el.setAttribute('aria-label',v);el.setAttribute('title',v)});
+  $('#lEn').setAttribute('aria-pressed',LANG==='en');$('#lTh').setAttribute('aria-pressed',LANG==='th');
+  $('#slider').setAttribute('aria-label',tr('Select month','เลือกเดือน'));
+  $('#fbtxt').innerHTML=tr('<b>3D view unavailable</b><br>This browser does not support WebGL, or Three.js failed to load. The data panel still works.','<b>แสดงภาพ 3 มิติไม่ได้</b><br>เบราว์เซอร์นี้ไม่รองรับ WebGL หรือโหลด Three.js ไม่สำเร็จ ข้อมูลในแผงด้านข้างยังใช้งานได้ตามปกติ');
+  setPlayIcon();updPanelBtn();
+}
+
+var st={idx:LAST,mode:'energy',sel:-1,hov:-1,tab:'overview',xray:false,explode:false,rotate:!reduce,labels:window.innerWidth>=700,play:false,base:2023,efd:0,zebNet:true,scnView:false,scn:{pv:300,cool:20,it:10,lt:10,plug:8,ref:50,rec:0,year:2028}};
+
+var SYS=[
+ {k:'chiller',e:'Chiller plant',t:'Chiller plant',c:'#2f6f9f'},{k:'ahu',e:'AHU / FCU',t:'AHU / FCU',c:'#6fb0cf'},
+ {k:'it',e:'UPS + IT',t:'UPS + IT',c:'#7360b0'},{k:'lt',e:'Lighting',t:'แสงสว่าง',c:'#d9a21b'},
+ {k:'plug',e:'Plug loads',t:'เครื่องใช้ไฟฟ้า',c:'#8c9c95'},{k:'lift',e:'Lifts',t:'ลิฟต์',c:'#3f9a73'},
+ {k:'park',e:'Ventilation / pumps',t:'ระบายอากาศ/ปั๊ม',c:'#a9b3ae'},{k:'other',e:'Other',t:'อื่นๆ',c:'#bb7a4c'}];
+function sysName(s){return LANG==='th'?s.t:s.e}
+function fuse(f){return LANG==='th'?f.use:f.ue}
+function evName(e){return LANG==='th'?e.t:e.te}
+
+/* ====================================================== helpers */
+function yearRange(y){var a=(y-2020)*12;return [a,Math.min(LAST,a+11)]}
+function lbl(k){return (LANG==='th'?D.meta.mTh:D.meta.mEn)[D.month[k]-1]+' '+D.year[k]}
+function flKwhBase(i,k){var f=FL[i];return f.ac[k]+f.lt[k]+f.eq[k]+f.ot[k]}
+/* scenario view: floor loads as if the measures were fully in place (selected month's load pattern) */
+function flParts(i,k){
+  var f=FL[i];if(!st.scnView)return {ac:f.ac[k],lt:f.lt[k],eq:f.eq[k],ot:f.ot[k]};
+  var s=st.scn,itp=f.id==='F5'?Math.min(f.eq[k],B.sys.it[k]):0;
+  return {ac:f.ac[k]*(1-s.cool/100),lt:f.lt[k]*(1-s.lt/100),eq:itp*(1-s.it/100)+(f.eq[k]-itp)*(1-s.plug/100),ot:f.ot[k]};
+}
+function flKwh(i,k){var p=flParts(i,k);return p.ac+p.lt+p.eq+p.ot}
+function monthGridShare(k){
+  if(!st.scnView)return B.grid[k]/B.total[k];
+  var s=st.scn,y=B.sys;
+  var tot=B.total[k]-s.cool/100*(y.chiller[k]+y.ahu[k])-s.it/100*y.it[k]-s.lt/100*y.lt[k]-s.plug/100*y.plug[k];
+  var extra=B.kwp[k]>0?s.pv*B.pv[k]/B.kwp[k]:0;
+  return Math.max(0,1-(B.pv[k]+extra)/tot);
+}
+function labMonth(k){
+  var s=st.scn,y=B.sys,sc=st.scnView,G=D.meta.gwp;
+  var it=y.it[k]*(sc?1-s.it/100:1),ch=y.chiller[k]*(sc?1-s.cool/100:1);
+  var tot=B.total[k]-(sc?s.cool/100*(y.chiller[k]+y.ahu[k])+s.it/100*y.it[k]+s.lt/100*y.lt[k]+s.plug/100*y.plug[k]:0);
+  var extra=sc&&B.kwp[k]>0?s.pv*B.pv[k]/B.kwp[k]:0,pv=B.pv[k]+extra,grid=Math.max(0,tot-pv),ef=B.ef[k],rf=sc?1-s.ref/100:1;
+  var s1ref=B.s1ref[k]*rf,r134t=Math.min(s1ref,B.r134[k]*G.r134a/1000*rf),s1dsl=B.s1dsl[k];
+  var s2=grid*ef/1000,s1=s1ref+s1dsl;
+  return {it:it,ch:ch,tot:tot,pv:pv,grid:grid,gs:tot>0?grid/tot:0,ef:ef,r134t:r134t,s1ref:s1ref,s1dsl:s1dsl,dslL:B.dslL[k],s2:s2,s1:s1,t12:Math.max(1e-9,s1+s2)};
+}
+function flS1(i,k){var f=FL[i];if(st.scnView&&(f.id==='B2'||f.id==='F2'||f.id==='F3'||f.id==='F4'))return f.s1[k]*(1-st.scn.ref/100);return f.s1[k]}
+function flS2(i,k){return flKwh(i,k)*monthGridShare(k)*B.ef[k]/1000}
+function flT(i,k){return flS2(i,k)+flS1(i,k)}
+function annKwhM2(i,k){return flKwh(i,k)*365/D.days[k]/FL[i].area}
+function annKgM2(i,k){return flT(i,k)*1000*365/D.days[k]/FL[i].area}
+function dispVal(i,k){return st.mode==='energy'?annKwhM2(i,k):annKgM2(i,k)}
+function eqVal(i,k){return st.mode==='energy'?annKwhM2(i,k):annKgM2(i,k)/B.ef[k]}
+function yoy(arr,k){return k>=12&&arr[k-12]>0?(arr[k]-arr[k-12])/arr[k-12]:null}
+function dTxt(p,goodDown){if(p===null)return '';var up=p>0;var cls=(up===!!goodDown)?'bad':'good';return '<span class="'+cls+'">'+(up?'\u25B2 ':'\u25BC ')+nf(Math.abs(p)*100,1)+'%</span>'}
+
+var STOPS=[[0,[23,160,93]],[57,[37,168,95]],[90,[227,194,39]],[140,[232,137,43]],[250,[194,59,43]],[400,[125,28,43]]];
+function heatRGB(v){
+  for(var i=1;i<STOPS.length;i++){
+    if(v<=STOPS[i][0]){var a=STOPS[i-1],b=STOPS[i],t=Math.max(0,(v-a[0])/(b[0]-a[0]));
+      return [a[1][0]+(b[1][0]-a[1][0])*t,a[1][1]+(b[1][1]-a[1][1])*t,a[1][2]+(b[1][2]-a[1][2])*t]}}
+  return STOPS[STOPS.length-1][1].slice();
+}
+function rgbCss(c){return 'rgb('+Math.round(c[0])+','+Math.round(c[1])+','+Math.round(c[2])+')'}
+function heatCss(v){return rgbCss(heatRGB(v))}
+
+/* ====================================================== aggregates */
+function annual(y){var r=yearRange(y);return {s1:sum(B.s1,r[0],r[1]),s2:sum(B.s2,r[0],r[1]),tot:sum(B.total,r[0],r[1]),pv:sum(B.pv,r[0],r[1]),grid:sum(B.grid,r[0],r[1]),n:r[1]-r[0]+1}}
+var YEARS=[2020,2021,2022,2023,2024,2025,2026];
+var ANN={};YEARS.forEach(function(y){ANN[y]=annual(y)});
+function est26(){
+  var a=yearRange(2026)[0],n=LAST-a+1,p=yearRange(2025)[0];
+  var y2=ANN[2026],y25=sum(B.s2,p,p+n-1),q4=sum(B.s2,p+n,p+11);
+  var g25=sum(B.grid,p,p+n-1),g4=sum(B.grid,p+n,p+11);
+  var t25=sum(B.total,p,p+n-1),t4=sum(B.total,p+n,p+11);
+  return {s2:y2.s2+q4*y2.s2/y25,s1:y2.s1*12/n,grid:y2.grid+g4*y2.grid/g25,tot:y2.tot+t4*y2.tot/t25,n:n}
+}
+var E26=est26();
+function tco2(y){return y===2026?E26.s1+E26.s2:ANN[y].s1+ANN[y].s2}
+function nzModel(){
+  var bs=st.base,base=tco2(bs),d=st.efd;
+  var ef26=B.ef[LAST];
+  var s1bau=(ANN[2023].s1+ANN[2024].s1+ANN[2025].s1)/3;
+  var bau=function(y){return y<=2026?tco2(y):E26.grid*ef26*Math.pow(1-d,y-2026)/1000+s1bau};
+  var tgt=function(y){return y<bs?null:base*Math.max(0,1-(y-bs)/(2050-bs))};
+  return {base:base,bs:bs,bau:bau,tgt:tgt,ef:function(y){return ef26*Math.pow(1-d,y-2026)},s1bau:s1bau}
+}
+function zebStats(k){
+  var a=Math.max(0,k-11),n=k-a+1,f=12/n;
+  var kwh=sum(B.total,a,k)*f,pv=sum(B.pv,a,k)*f;
+  return {sec:kwh/A,net:(kwh-pv)/A,n:n,a:a,kwh:kwh,pv:pv}
+}
+
+/* ====================================================== charts (SVG) */
+function monthlyChart(){
+  var W=360,H=150,pl=34,pr=6,pt=8,pb=18,max=500000;
+  var X=function(i){return pl+(W-pl-pr)*i/(N-1)},Y=function(v){return pt+(H-pt-pb)*(1-v/max)};
+  var s='<svg class="ch" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+tr('Monthly electricity use and Solar PV output','ไฟฟ้ารายเดือนและ Solar PV')+'">';
+  [0,250000,500000].forEach(function(v){s+='<line class="ax" x1="'+pl+'" x2="'+(W-pr)+'" y1="'+Y(v)+'" y2="'+Y(v)+'"/><text x="'+(pl-4)+'" y="'+(Y(v)+3)+'" text-anchor="end">'+(v/1000)+'</text>'});
+  var line='',area='',i;
+  for(i=0;i<N;i++){line+=(i?'L':'M')+X(i).toFixed(1)+' '+Y(B.total[i]).toFixed(1)}
+  area='M'+X(0)+' '+Y(0);for(i=0;i<N;i++)area+='L'+X(i).toFixed(1)+' '+Y(B.pv[i]).toFixed(1);area+='L'+X(N-1)+' '+Y(0)+'Z';
+  s+='<path d="'+area+'" fill="var(--sun)" opacity=".55"/><path d="'+line+'" fill="none" stroke="var(--ink)" stroke-width="1.4"/>';
+  for(var y=2020;y<=2026;y++){s+='<text x="'+X((y-2020)*12)+'" y="'+(H-4)+'" text-anchor="middle">'+y+'</text>'}
+  D.events.forEach(function(e){s+='<circle cx="'+X(e.i)+'" cy="'+Y(B.total[e.i])+'" r="2.6" fill="var(--panel)" stroke="var(--ink)" stroke-width="1"/>'});
+  var cx=X(st.idx);s+='<line x1="'+cx+'" x2="'+cx+'" y1="'+pt+'" y2="'+(H-pb)+'" stroke="var(--good)" stroke-width="1.5"/><circle cx="'+cx+'" cy="'+Y(B.total[st.idx])+'" r="3.6" fill="var(--good)"/>';
+  s+='<text x="'+pl+'" y="'+(pt-1)+'">'+tr('MWh / month','MWh/เดือน')+'</text>';
+  s+='<rect x="0" y="0" width="'+W+'" height="'+H+'" fill="transparent" data-chart="m" data-pl="'+pl+'" data-pr="'+pr+'" data-w="'+W+'"/></svg>';
+  return s;
+}
+
+function zebChart(k){
+  var W=360,H=170,pl=30,pr=40,pt=16,pb=30,max=140,vals=[],net=st.zebNet;
+  for(var y=2020;y<=2025;y++){var a=ANN[y],g=a.tot/A,n=(a.tot-a.pv)/A;vals.push({l:String(y),g:net?n:g,n:net?g:n})}
+  var z=zebStats(k);vals.push({l:tr('12 mo','12 เดือน'),l2:tr('to ','ถึง ')+lbl(k),g:net?z.net:z.sec,n:net?z.sec:z.net,cur:1});
+  var bw=(W-pl-pr)/vals.length,Y=function(v){return pt+(H-pt-pb)*(1-v/max)};
+  var s='<svg class="ch" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+tr('Annual SEC against the ZEB target','SEC รายปีเทียบเป้า ZEB')+'">';
+  [0,50,100].forEach(function(v){s+='<line class="ax" x1="'+pl+'" x2="'+(W-pr)+'" y1="'+Y(v)+'" y2="'+Y(v)+'"/><text x="'+(pl-4)+'" y="'+(Y(v)+3)+'" text-anchor="end">'+v+'</text>'});
+  vals.forEach(function(v,j){
+    var x=pl+bw*j+bw*0.18,w=bw*0.64;
+    s+='<rect x="'+x+'" y="'+Y(v.g)+'" width="'+w+'" height="'+(Y(0)-Y(v.g))+'" rx="2" fill="'+heatCss(v.g)+'" opacity="'+(v.cur?1:.78)+'"/>';
+    s+='<text x="'+(x+w/2)+'" y="'+(Y(v.g)-3)+'" text-anchor="middle" style="fill:var(--ink);font-weight:500">'+nf(v.g,0)+'</text>';
+    s+='<line x1="'+(x-2)+'" x2="'+(x+w+2)+'" y1="'+Y(v.n)+'" y2="'+Y(v.n)+'" stroke="var(--ink)" stroke-width="1.6"/>';
+    s+='<text x="'+(x+w/2)+'" y="'+(H-pb+11)+'" text-anchor="middle"'+(v.cur?' style="fill:var(--ink);font-weight:600"':'')+'>'+v.l+'</text>';
+    if(v.l2)s+='<text x="'+(x+w/2)+'" y="'+(H-pb+21)+'" text-anchor="middle">'+v.l2+'</text>';
+  });
+  s+='<line x1="'+pl+'" x2="'+(W-pr)+'" y1="'+Y(ZEB)+'" y2="'+Y(ZEB)+'" stroke="var(--good)" stroke-width="1.6" stroke-dasharray="5 3"/><text x="'+(W-pr+4)+'" y="'+(Y(ZEB)+3)+'" style="fill:var(--good);font-weight:600">ZEB '+ZEB+'</text>';
+  return s+'</svg>';
+}
+
+function nzChart(m,scn){
+  var W=360,H=210,pl=38,pr=10,pt=14,pb=24,y0=2020,y1=2050;
+  var X=function(y){return pl+(W-pl-pr)*(y-y0)/(y1-y0)};
+  var vmax=0;YEARS.forEach(function(y){vmax=Math.max(vmax,tco2(y))});vmax=Math.max(vmax,m.base)*1.1;
+  var step=vmax>2400?1000:500;
+  var Y=function(v){return pt+(H-pt-pb)*(1-v/vmax)};
+  var s='<svg class="ch" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+tr('Pathway to Net Zero by 2050','เส้นทางสู่ Net Zero ปี 2050')+'">';
+  for(var v=0;v<=vmax;v+=step)s+='<line class="ax" x1="'+pl+'" x2="'+(W-pr)+'" y1="'+Y(v)+'" y2="'+Y(v)+'"/><text x="'+(pl-4)+'" y="'+(Y(v)+3)+'" text-anchor="end">'+nf(v)+'</text>';
+  var bw=(W-pl-pr)/(y1-y0)*0.72;
+  YEARS.forEach(function(y){
+    var s2=y===2026?E26.s2:ANN[y].s2,s1=y===2026?E26.s1:ANN[y].s1,x=X(y)-bw/2,op=y===2026?0.5:1;
+    s+='<rect x="'+x+'" y="'+Y(s2)+'" width="'+bw+'" height="'+(Y(0)-Y(s2))+'" fill="var(--s2)" opacity="'+op+'"/>';
+    s+='<rect x="'+x+'" y="'+Y(s1+s2)+'" width="'+bw+'" height="'+(Y(s2)-Y(s1+s2))+'" fill="var(--s1)" opacity="'+op+'"/>';
+  });
+  var p='';for(var y=2026;y<=2050;y++)p+=(y===2026?'M':'L')+X(y).toFixed(1)+' '+Y(m.bau(y)).toFixed(1);
+  s+='<path d="'+p+'" fill="none" stroke="var(--bad)" stroke-width="1.6" stroke-dasharray="4 3"/>';
+  s+='<line x1="'+X(m.bs)+'" y1="'+Y(m.base)+'" x2="'+X(2050)+'" y2="'+Y(0)+'" stroke="var(--good)" stroke-width="2"/>';
+  s+='<circle cx="'+X(m.bs)+'" cy="'+Y(m.base)+'" r="3.4" fill="var(--good)"/><circle cx="'+X(2050)+'" cy="'+Y(0)+'" r="3.4" fill="var(--good)"/>';
+  if(scn){
+    var q='';for(y=2026;y<=2050;y++)q+=(y===2026?'M':'L')+X(y).toFixed(1)+' '+Y(scn.loc(y)).toFixed(1);
+    s+='<path d="'+q+'" fill="none" stroke="var(--grid)" stroke-width="2.2"/>';
+    if(scn.mkt){var q2='';for(y=2026;y<=2050;y++)q2+=(y===2026?'M':'L')+X(y).toFixed(1)+' '+Y(scn.mkt(y)).toFixed(1);
+      s+='<path d="'+q2+'" fill="none" stroke="var(--grid)" stroke-width="2.2" stroke-dasharray="1.5 3.5" stroke-linecap="round"/>'}
+  }
+  if(m.bs<2030){var t3=m.tgt(2030),b3=scn?scn.loc(2030):m.bau(2030),d3=b3-t3;
+    s+='<line x1="'+X(2030)+'" x2="'+X(2030)+'" y1="'+Y(b3)+'" y2="'+Y(t3)+'" stroke="var(--ink)" stroke-width="1.4"/><circle cx="'+X(2030)+'" cy="'+Y(b3)+'" r="2.4" fill="'+(scn?'var(--grid)':'var(--bad)')+'"/><circle cx="'+X(2030)+'" cy="'+Y(t3)+'" r="2.4" fill="var(--good)"/>';
+    s+='<text x="'+(X(2030)+5)+'" y="'+((Y(b3)+Y(t3))/2+3)+'" style="fill:var(--ink);font-weight:500">'+tr('Gap ','ช่องว่าง ')+(scn?(d3>0?'+':'\u2212'):'')+nf(Math.abs(d3))+'</text>'}
+  [2020,2030,2040,2050].forEach(function(y){s+='<text x="'+X(y)+'" y="'+(H-6)+'" text-anchor="middle">'+y+'</text>'});
+  s+='<text x="'+pl+'" y="'+(pt-3)+'">tCO\u2082e/'+tr('yr','ปี')+'</text>';
+  return s+'</svg>';
+}
+
+function sparkline(vals,cur,w,h){
+  var mx=Math.max.apply(null,vals)*1.1||1,s='<svg class="spark" viewBox="0 0 '+w+' '+h+'">',p='';
+  vals.forEach(function(v,i){p+=(i?'L':'M')+(i*(w-4)/(vals.length-1)+2).toFixed(1)+' '+(h-3-(h-8)*v/mx).toFixed(1)});
+  s+='<path d="'+p+'" fill="none" stroke="var(--ink)" stroke-width="1.4"/>';
+  var cx=cur*(w-4)/(vals.length-1)+2;
+  s+='<circle cx="'+cx+'" cy="'+(h-3-(h-8)*vals[cur]/mx)+'" r="3" fill="var(--good)"/></svg>';
+  return s;
+}
+
+/* ====================================================== panel */
+function sysSplit(a,b){var o={},t=0;SYS.forEach(function(s){o[s.k]=sum(B.sys[s.k],a,b);t+=o[s.k]});return {v:o,t:t}}
+function noteBox(title,items){return '<div class="note"><b>'+title+'</b><ul>'+items.map(function(t){return '<li>'+t+'</li>'}).join('')+'</ul></div>'}
+function stackBar(sp){
+  var h='<div class="stack">';SYS.forEach(function(s){h+='<i style="width:'+(sp.v[s.k]/sp.t*100)+'%;background:'+s.c+'"></i>'});h+='</div><div class="leg">';
+  SYS.forEach(function(s){h+='<span><em style="background:'+s.c+'"></em>'+sysName(s)+'<u>'+nf(sp.v[s.k]/sp.t*100,0)+'%</u></span>'});
+  return h+'</div>';
+}
+
+function viewOverview(){
+  var k=st.idx,ev=D.events.filter(function(e){return e.i===k})[0];
+  var tot=B.total[k],pv=B.pv[k],gr=B.grid[k],s1=B.s1[k],s2=B.s2[k];
+  var h='<h2>'+lbl(k)+'</h2><div class="mut small">'+tr('Occupants ','ผู้ใช้อาคาร ')+nf(B.users[k])+tr(', occupancy index ',' คน, ดัชนีการเข้าใช้ ')+nf(B.occ[k]*100,0)+'%</div>';
+  h+='<div style="margin-top:8px">';
+  h+='<div class="row"><span>'+ic('zap')+tr('Building electricity use','ไฟฟ้าที่ใช้ทั้งอาคาร')+'</span><span class="v">'+nf(tot)+' kWh</span><span class="d">'+dTxt(yoy(B.total,k),true)+'</span></div>';
+  h+='<div class="row"><span>'+ic('sun','var(--sun)')+'Solar PV ('+B.kwp[k]+' kWp)</span><span class="v">'+nf(pv)+' kWh</span><span class="d mut">'+nf(pv/tot*100,1)+'%</span></div>';
+  h+='<div class="row"><span>'+ic('plug')+tr('Grid electricity','ไฟฟ้าจากกริด')+'</span><span class="v">'+nf(gr)+' kWh</span><span class="d">'+dTxt(yoy(B.grid,k),true)+'</span></div>';
+  h+='<div class="row"><span>'+ic('coins')+tr('Electricity cost','ค่าไฟ')+'</span><span class="v">'+nf(B.cost[k]/1e6,2)+tr(' M THB',' ล้านบาท')+'</span><span class="d">'+dTxt(yoy(B.cost,k),true)+'</span></div>';
+  h+='<div class="row"><span>'+ic('factory','var(--s2)')+tr('Scope 2 (grid, EF ','Scope 2 (ไฟฟ้า, EF ')+B.ef[k].toFixed(4)+')</span><span class="v">'+nf(s2,1)+' t</span><span class="d">'+dTxt(yoy(B.s2,k),true)+'</span></div>';
+  h+='<div class="row"><span>'+ic('flame','var(--s1)')+tr('Scope 1 (refrigerant + diesel)','Scope 1 (สารทำความเย็น + ดีเซล)')+'</span><span class="v">'+nf(s1,1)+' t</span><span class="d">'+dTxt(yoy(B.s1,k),true)+'</span></div>';
+  h+='<div class="row"><span>'+ic('sigma')+'<b>'+tr('Scope 1+2 total','Scope 1+2 รวม')+'</b></span><span class="v"><b>'+nf(s1+s2,1)+' tCO\u2082e</b></span><span class="d">'+dTxt(yoy(B.s1.map(function(v,i){return v+B.s2[i]}),k),true)+'</span></div></div>';
+  if(ev)h+='<div class="note" style="margin-top:10px"><b>'+tr('Event this month: ','เหตุการณ์เดือนนี้: ')+'</b>'+evName(ev)+'</div>';
+  h+='<h3>'+tr('Monthly electricity (click or tap the chart to pick a month)','ไฟฟ้ารายเดือน (กด/แตะกราฟเพื่อเลือกเดือน)')+'</h3>'+monthlyChart();
+  h+='<div class="mut small">'+tr('Black line = electricity use, yellow area = Solar PV output, dots = key events','เส้นดำ = ไฟฟ้าที่ใช้, พื้นที่สีเหลือง = ผลิตจาก Solar PV, จุด = เหตุการณ์สำคัญ')+'</div>';
+  h+='<h3>'+tr('Where the electricity goes (this month)','ไฟฟ้าไปอยู่ที่ไหน (เดือนนี้)')+'</h3>'+stackBar(sysSplit(k,k));
+  h+=noteBox(tr('Notes','หมายเหตุ'),[tr('All figures are simulated for demonstration.','ข้อมูลทั้งหมดเป็นข้อมูลสมมติเพื่อสาธิต'),tr('They are not real meter data.','ไม่ใช่ข้อมูลมิเตอร์จริง')]);
+  return h;
+}
+
+function viewZeb(){
+  var k=st.idx,z=zebStats(k),net=st.zebNet,main=net?z.net:z.sec,alt=net?z.sec:z.net,gap=main-ZEB,ratio=main/ZEB;
+  var gmax=200,pc=clamp(main/gmax*100,0,100),pz=ZEB/gmax*100;
+  var h='<div style="margin:0 0 10px"><label class="sw"><input type="checkbox" role="switch" data-zebnet="1"'+(net?' checked':'')+'><span class="trk"></span><span>'+tr('Count on-site Solar PV','นับรวมไฟจาก Solar PV')+': <b>'+(net?tr('On','เปิด'):tr('Off','ปิด'))+'</b></span></label></div>';
+  h+='<div class="mut small">'+tr('SEC, last 12 months to ','SEC 12 เดือนล่าสุด ถึง ')+lbl(k)+', '+(net?tr('net of Solar PV','หลังหักไฟจาก Solar PV'):tr('gross, before Solar PV','รวมทั้งหมด ก่อนหัก Solar PV'))+(z.n<12?' <b>'+tr('annualised from '+z.n+' months','ปรับเป็นรายปีจาก '+z.n+' เดือน')+'</b>':'')+'</div>';
+  h+='<div class="big" style="color:'+heatCss(main)+'">'+nf(main,1)+'<span class="unit">'+uSec()+'</span></div>';
+  h+='<div class="mut">'+tr('ZEB target (DEDE) ','เป้า ZEB (DEDE) ')+ZEB+' '+uSec()+tr(', currently ',', ปัจจุบันสูงกว่า ')+'<b style="color:var(--ink)">'+nf(ratio,2)+tr('\u00D7 higher',' เท่า')+'</b></div>';
+  h+='<div class="gauge"><div class="fill" style="width:'+pc+'%;background:'+heatCss(main)+'"></div>'+
+     '<span class="mk t" style="left:'+pz+'%">ZEB '+ZEB+'</span><span class="mk c" style="left:'+pc+'%">'+nf(main,0)+'</span></div>';
+  h+='<div class="row"><span>'+tr('Reduction still needed','ต้องลดอีก')+'</span><span class="v">'+nf(gap,1)+' '+uSec()+'</span><span class="d bad">\u2212'+nf(gap/main*100,0)+'%</span></div>';
+  h+='<div class="row"><span>'+tr('In energy terms','เทียบเป็นพลังงาน')+'</span><span class="v">'+nf(gap*A/1000,0)+' MWh/'+tr('yr','ปี')+'</span><span class="d"></span></div>';
+  h+='<div class="row"><span>'+(net?tr('SEC before Solar PV (gross)','SEC ก่อนหักไฟจาก Solar PV'):tr('SEC net of Solar PV','SEC หลังหักไฟจาก Solar PV'))+'</span><span class="v">'+nf(alt,1)+'</span><span class="d mut">'+uSec()+'</span></div>';
+  h+='<div class="row"><span>'+tr('Solar PV offset','ไฟที่ Solar PV ชดเชย')+'</span><span class="v">'+nf(z.sec-z.net,1)+'</span><span class="d mut">'+uSec()+'</span></div>';
+  h+='<h3>'+tr('Annual SEC against the target','SEC รายปี เทียบเป้า')+'</h3>'+zebChart(k);
+  h+='<div class="mut small">'+(net?tr('Bars = net of Solar PV, black ticks = gross use, dashed green line = ZEB target','แท่ง = หลังหัก Solar PV, ขีดดำ = ก่อนหัก Solar PV, เส้นประเขียว = เป้า ZEB'):tr('Bars = gross use, black ticks = net of Solar PV, dashed green line = ZEB target','แท่ง = ก่อนหัก Solar PV, ขีดดำ = หลังหัก Solar PV, เส้นประเขียว = เป้า ZEB'))+'</div>';
+  var sp=sysSplit(z.a,k),f5=sum(FL[6].ac,z.a,k)+sum(FL[6].lt,z.a,k)+sum(FL[6].eq,z.a,k)+sum(FL[6].ot,z.a,k);
+  var tot=sp.t,f5s=f5/tot,off=0,i,j;for(i=7;i<=20;i++){for(j=z.a;j<=k;j++)off+=flKwhBase(i,j)}
+  off=off*12/z.n/(14*1800);
+  var woF5=((tot-f5)*12/z.n)/(A-FL[6].area);
+  h+='<h3>'+tr('Where the gap comes from (gross use)','ที่มาของช่องว่าง (ก่อนหัก Solar PV)')+'</h3>';
+  h+='<div class="row"><span>'+tr('Floor F5 (Data room + UPS) share of electricity','ชั้น F5 (Data room + UPS) ใช้ไฟ')+'</span><span class="v">'+nf(f5s*100,0)+'%</span><span class="d mut">'+tr('of ','จากพื้นที่ ')+nf(FL[6].area/A*100,1)+tr('% of area','%')+'</span></div>';
+  h+='<div class="row"><span>'+tr('Office floors F6\u2013F19, average','ชั้นสำนักงาน F6\u2013F19 เฉลี่ย')+'</span><span class="v">'+nf(off,0)+'</span><span class="d mut">'+uSec()+'</span></div>';
+  h+='<div class="row"><span>'+tr('Without F5 (energy and area removed)','ถ้าตัด F5 ออกทั้งพลังงานและพื้นที่')+'</span><span class="v">'+nf(woF5,0)+'</span><span class="d mut">'+uSec()+'</span></div>';
+  h+='<h3>'+tr('Electricity mix (last 12 months)','สัดส่วนการใช้ไฟ (12 เดือนล่าสุด)')+'</h3>'+stackBar(sp);
+  h+=noteBox(tr('About this figure','เกี่ยวกับตัวเลขนี้'),[
+    tr('Target: 57 kWh/m\u00B2\u00B7yr (DEDE), electricity only.','เป้า: 57 kWh/m\u00B2\u00B7ปี (DEDE) เฉพาะพลังงานไฟฟ้า'),
+    tr('Solar PV is included: on-site generation is counted, so the SEC net of Solar PV is the figure compared with the target. Use the switch above to see gross use.','รวม Solar PV ด้วย: นับไฟที่ผลิตเองในอาคาร ดังนั้นค่าที่ใช้เทียบเป้าคือ SEC หลังหักไฟจาก Solar PV ใช้สวิตช์ด้านบนเพื่อดูแบบก่อนหัก'),
+    tr('Area basis: '+nf(A)+' m\u00B2 above-ground area, basements excluded. The area definition still needs to be confirmed against the DEDE criteria.','พื้นที่ฐาน '+nf(A)+' m\u00B2 (พื้นที่เหนือดิน ไม่รวมชั้นใต้ดิน) ยังต้องยืนยันนิยามพื้นที่กับเกณฑ์ DEDE ฉบับจริง'),
+    tr('Floor colours show each floor own consumption, because Solar PV is not allocated to floors.','สีของแต่ละชั้นแสดงไฟที่ชั้นนั้นใช้เอง เพราะไม่ได้แบ่ง Solar PV ให้รายชั้น')]);
+  return h;
+}
+
+function nzStatic(){
+  var o='';for(var y=2020;y<=2025;y++)o+='<option value="'+y+'"'+(y===st.base?' selected':'')+'>'+y+'</option>';
+  var e=[0,0.01,0.02,0.03].map(function(v){return '<option value="'+v+'"'+(v===st.efd?' selected':'')+'>'+(v*100)+'%'+tr(' per year',' ต่อปี')+'</option>'}).join('');
+  return '<div class="mut small">'+tr('Boundary: Scope 1+2 (electricity, refrigerant, genset diesel), location-based','ขอบเขต Scope 1+2 (ไฟฟ้า สารทำความเย็น เครื่องปั่นไฟ), แบบ location-based')+'</div><div class="ctl">'+
+   '<label>'+tr('Base year','ปีฐาน')+'<select id="selBase">'+o+'</select></label>'+
+   '<label>'+tr('Future grid EF decline (scenario)','ค่า EF กริดลดลงในอนาคต (สถานการณ์)')+'<select id="selEf">'+e+'</select></label></div><div id="nzDyn"></div>';
+}
+function viewNzDyn(){
+  var m=nzModel(),k=st.idx,a=Math.max(0,k-11),n=k-a+1;
+  var cur=(sum(B.s1,a,k)+sum(B.s2,a,k))*12/n;
+  var due=m.tgt(2026);
+  var h='<div class="row"><span>'+tr('Base year ','ปีฐาน ')+m.bs+'</span><span class="v">'+nf(m.base)+' t</span><span class="d"></span></div>';
+  h+='<div class="row"><span>'+tr('Last 12 months (to ','12 เดือนล่าสุด (ถึง ')+lbl(k)+')</span><span class="v">'+nf(cur)+' t</span><span class="d">'+dTxt((cur-m.base)/m.base,true)+'</span></div>';
+  h+='<div class="row"><span>'+tr('Target year 2050','เป้าหมายปี 2050')+'</span><span class="v good">0 (Net Zero)</span><span class="d"></span></div>';
+  if(due!==null){var over=tco2(2026)>due;h+='<div class="row"><span>'+tr('On the target path, 2026 should be','ตามเส้นเป้า ปี 2026 ควรอยู่ที่')+'</span><span class="v">'+nf(due)+' t</span><span class="d '+(over?'bad':'good')+'">'+(over?tr('over ','เกิน '):tr('under ','ต่ำกว่า '))+nf(Math.abs(tco2(2026)-due))+'</span></div>'}
+  h+='<h3>'+tr('Pathway to Net Zero','เส้นทางสู่ Net Zero')+'</h3>'+nzChart(m);
+  h+='<div class="leg" style="margin-top:6px"><span><em style="background:var(--s2)"></em>Scope 2</span><span><em style="background:var(--s1)"></em>Scope 1</span><span><em style="background:var(--good)"></em>'+tr('Target path (linear to 0)','เส้นเป้า (ลดเชิงเส้นสู่ 0)')+'</span><span><em style="background:var(--bad)"></em>'+tr('Business as usual (BAU)','ถ้าไม่ทำอะไรเพิ่ม (BAU)')+'</span></div>';
+  h+='<div class="mut small" style="margin-top:4px">'+tr('The 2026 bar is a full-year estimate','แท่งปี 2026 คือประมาณการทั้งปี')+'</div>';
+  h+='<h3>'+tr('Gap to close','ช่องว่างที่ต้องปิด')+'</h3><table class="t"><tr><th>'+tr('Year','ปี')+'</th><th>'+tr('Target','เป้า')+'</th><th>BAU</th><th>'+tr('Gap','ช่องว่าง')+'</th></tr>';
+  [2030,2040,2050].forEach(function(y){var t=m.tgt(y),b=m.bau(y);h+='<tr><td>'+y+'</td><td>'+nf(t)+'</td><td>'+nf(b)+'</td><td class="bad"><b>'+nf(b-t)+'</b></td></tr>'});
+  h+='</table><div class="mut small" style="margin-top:3px">'+tr('Unit: tCO\u2082e','หน่วย tCO\u2082e')+'</div>';
+  var g30=m.bau(2030)-m.tgt(2030),ef30=m.ef(2030),kwh=g30*1000/ef30;
+  h+=noteBox(tr('What the 2030 gap means','ช่องว่างปี 2030 หมายถึงอะไร'),[
+    tr('About <b>'+nf(kwh/1e6,2)+' GWh/yr</b> less grid electricity,','ลดไฟจากกริดราว <b>'+nf(kwh/1e6,2)+' GWh/ปี</b>'),
+    tr('or about <b>'+nf(kwh/1256,0)+' kWp</b> of extra Solar PV (1,256 kWh/kWp\u00B7yr assumed).','หรือเพิ่ม Solar PV ราว <b>'+nf(kwh/1256,0)+' kWp</b> (สมมติผลิตได้ 1,256 kWh/kWp\u00B7ปี)'),
+    tr('Installed today: '+B.kwp[LAST]+' kWp.','ปัจจุบันติดตั้งอยู่ '+B.kwp[LAST]+' kWp')]);
+  var G=D.meta.gwp;
+  h+=noteBox(tr('Factors and scope','ค่าตัวคูณและขอบเขต'),[
+    tr('Grid EF '+D.meta.efGrid.toFixed(4)+' kg'+CO2+'e/kWh ('+D.meta.efSource+', as specified), applied to every month.','EF กริด '+D.meta.efGrid.toFixed(4)+' kg'+CO2+'e/kWh ('+D.meta.efSource+' ตามที่ระบุ) ใช้กับทุกเดือน'),
+    tr('GWP: R-134a '+nf(G.r134a,0)+', R-410A '+nf(G.r410a,1)+'. Diesel '+D.meta.dslEf+' kg'+CO2+'e/L.','GWP: R-134a '+nf(G.r134a,0)+', R-410A '+nf(G.r410a,1)+' ดีเซล '+D.meta.dslEf+' kg'+CO2+'e/ลิตร'),
+    tr('A future decline in grid EF is a scenario setting (default 0%).','การลดลงของ EF กริดในอนาคตเป็นค่าสถานการณ์ (ตั้งต้น 0%)'),
+    tr('Scope 3 and offsets are not included.','ยังไม่รวม Scope 3 และการชดเชยคาร์บอน')]);
+  return h;
+}
+
+function viewFloors(){
+  var k=st.idx,order=FL.map(function(f,i){return i}).sort(function(a,b){return dispVal(b,k)-dispVal(a,k)});
+  var unit=st.mode==='energy'?uSec():uC();
+  var mx=dispVal(order[0],k),h='';
+  if(st.sel>=0){
+    var i=st.sel,f=FL[i],kw=flKwh(i,k),t=flT(i,k),fp=flParts(i,k);
+    var parts=[['ac',tr('Air-conditioning (allocated Chiller + AHU)','แอร์ (Chiller+AHU ที่จัดสรรมา)'),'#2f6f9f'],['lt',tr('Lighting','แสงสว่าง'),'#d9a21b'],['eq','Plug + IT','#7360b0'],['ot',tr('Lifts / ventilation / other','ลิฟต์/ระบายอากาศ/อื่นๆ'),'#bb7a4c']];
+    h+='<h2>'+tr('Floor ','ชั้น ')+f.id+'</h2><div class="mut">'+fuse(f)+', '+nf(f.area)+' m\u00B2, '+tr('occupants ','ผู้ใช้ ')+nf(f.users[k])+tr('',' คน')+'</div>';
+    h+='<div class="stack" style="margin-top:10px">';parts.forEach(function(p){h+='<i style="width:'+(fp[p[0]]/kw*100)+'%;background:'+p[2]+'"></i>'});h+='</div><div class="leg">';
+    parts.forEach(function(p){h+='<span><em style="background:'+p[2]+'"></em>'+p[1]+'<u>'+nf(fp[p[0]]/kw*100,0)+'%</u></span>'});h+='</div>';
+    h+='<div style="margin-top:8px">';
+    h+='<div class="row"><span>'+tr('Electricity this month','ไฟฟ้าเดือนนี้')+'</span><span class="v">'+nf(kw)+' kWh</span><span class="d mut">'+nf(kw/B.total[k]*100,1)+tr('% of building','% ของอาคาร')+'</span></div>';
+    h+='<div class="row"><span>'+tr('SEC (annualised)','SEC (ปรับเป็นรายปี)')+'</span><span class="v">'+nf(annKwhM2(i,k),0)+'</span><span class="d mut">'+uSec()+'</span></div>';
+    h+='<div class="row"><span>'+tr('Carbon, Scope 1+2','คาร์บอน Scope 1+2')+'</span><span class="v">'+nf(t,1)+' t</span><span class="d mut">'+nf(annKgM2(i,k),0)+' '+tr('kg/m\u00B2\u00B7yr','kg/m\u00B2\u00B7ปี')+'</span></div>';
+    if(flS1(i,k)>0)h+='<div class="row"><span>'+tr('Of which Scope 1','ในนั้นเป็น Scope 1')+'</span><span class="v">'+nf(flS1(i,k),1)+' t</span><span class="d"></span></div>';
+    h+='</div><h3>'+tr('Last 24 months (','ย้อนหลัง 24 เดือน (')+(st.mode==='energy'?'SEC':'kg'+CO2+'e/m\u00B2')+')</h3>';
+    var a=Math.max(0,k-23),vals=[];for(var j=a;j<=k;j++)vals.push(dispVal(i,j));
+    h+=sparkline(vals,vals.length-1,360,56);
+    h+='<div class="mut small"><button class="chip" data-i="-1" style="margin-top:6px">'+tr('Clear floor selection','ล้างการเลือกชั้น')+'</button></div>';
+    h+='<h3>'+tr('All floors','ทุกชั้น')+'</h3>';
+  }else{h+='<div class="mut small">'+tr('Sorted by '+(st.mode==='energy'?'energy':'carbon')+' intensity ('+unit+') at '+lbl(k)+'. Pick a floor here or click the building.',
+    'เรียงตาม'+(st.mode==='energy'?'ความเข้มข้นพลังงาน':'ความเข้มข้นคาร์บอน')+' ('+unit+') ณ '+lbl(k)+' กดเลือกชั้นหรือกดที่ตัวอาคาร')+'</div>'}
+  h+='<div style="margin-top:6px">';
+  order.forEach(function(i){var v=dispVal(i,k),c=heatCss(eqVal(i,k));
+    h+='<button class="frow'+(i===st.sel?' on':'')+'" data-i="'+i+'"><span class="dot" style="background:'+c+'"></span><span class="fn">'+FL[i].id+'</span><span class="fu">'+fuse(FL[i])+'</span><span class="fv">'+nf(v,0)+'</span><span class="fb"><i style="width:'+clamp(v/mx*100,2,100)+'%;background:'+c+'"></i></span></button>'});
+  h+='</div>';
+  if(st.mode==='carbon')h+=noteBox(tr('How carbon is allocated','การจัดสรรคาร์บอน'),[tr('Scope 1 goes where it occurs: R-134a to B2 (Chiller plant), R-410A to F2\u2013F4, diesel to B1 (genset).','Scope 1 ตามจุดเกิดจริง: R-134a ไป B2 (Chiller plant), R-410A ไป F2\u2013F4, ดีเซลไป B1 (เครื่องปั่นไฟ)'),tr('Scope 2 is split by the electricity each floor uses.','Scope 2 แบ่งตามไฟที่แต่ละชั้นใช้')]);
+  else h+=noteBox(tr('How energy is allocated','การจัดสรรพลังงาน'),[tr('Chiller plant electricity is shared between floors by conditioned area.','ไฟของ Chiller plant แบ่งให้แต่ละชั้นตามพื้นที่ปรับอากาศ'),tr('UPS + IT counts towards F5.','UPS + IT นับเป็นของชั้น F5')]);
+  return h;
+}
+
+/* ====================================================== scenario engine (indicative assumptions) */
+var UNIT={pvYield:1256,pvCapex:30000,cool:16,it:22,lt:9,plug:5,refCapexPerT:12000,refKgPrice:450,recPerMWh:40,life:15};
+var SL=[
+ {k:'pv',ic:'sun',en:'Extra Solar PV',th:'Solar PV เพิ่ม',min:0,max:770,step:10,unit:' kWp'},
+ {k:'cool',ic:'snowflake',en:'Cooling system saving (Chiller + AHU)',th:'ประหยัดระบบทำความเย็น (Chiller + AHU)',min:0,max:35,step:1,unit:'%'},
+ {k:'it',ic:'server',en:'UPS + IT saving',th:'ประหยัด UPS + IT',min:0,max:25,step:1,unit:'%'},
+ {k:'lt',ic:'lightbulb',en:'Lighting saving',th:'ประหยัดแสงสว่าง',min:0,max:30,step:1,unit:'%'},
+ {k:'plug',ic:'plug',en:'Plug-load saving',th:'ประหยัดเครื่องใช้ไฟฟ้า',min:0,max:20,step:1,unit:'%'},
+ {k:'ref',ic:'droplets',en:'Refrigerant leak reduction',th:'ลดการรั่วของสารทำความเย็น',min:0,max:90,step:5,unit:'%'},
+ {k:'rec',ic:'badge-check',en:'Renewable certificates (share of grid power)',th:'ใบรับรองพลังงานหมุนเวียน (สัดส่วนไฟกริด)',min:0,max:100,step:5,unit:'%'},
+ {k:'year',ic:'calendar',en:'Implementation year',th:'ปีที่ดำเนินการ',min:2027,max:2035,step:1,unit:''}];
+var PRESETS={
+ bau:{pv:0,cool:0,it:0,lt:0,plug:0,ref:0,rec:0,year:2028},
+ eff:{pv:0,cool:20,it:10,lt:10,plug:8,ref:50,rec:0,year:2028},
+ bal:{pv:300,cool:20,it:10,lt:10,plug:8,ref:50,rec:0,year:2028},
+ full:{pv:770,cool:30,it:20,lt:25,plug:12,ref:85,rec:100,year:2028}};
+
+function scnModel(){
+  var s=st.scn,U=UNIT,a=LAST-11,m=nzModel(),G=D.meta.gwp;
+  var base={};SYS.forEach(function(x){base[x.k]=sum(B.sys[x.k],a,LAST)});
+  var pvEx=sum(B.pv,a,LAST),grid12=sum(B.grid,a,LAST),tot12=sum(B.total,a,LAST),tariff=sum(B.cost,a,LAST)/grid12;
+  var kCool=s.cool/100*(base.chiller+base.ahu),kIt=s.it/100*base.it,kLt=s.lt/100*base.lt,kPl=s.plug/100*base.plug,kPv=s.pv*U.pvYield;
+  var kEff=kCool+kIt+kLt+kPl,kSave=kEff+kPv;
+  var refBau=sum(B.s1ref,36,71)/3,dslBau=sum(B.s1dsl,36,71)/3;
+  var f=function(y){return y<s.year?0:y===s.year?0.5:1};
+  var gridScn=function(y){return Math.max(0,E26.grid-f(y)*kSave)};
+  var s1=function(y){return refBau*(1-s.ref/100*f(y))+dslBau};
+  var loc=function(y){return y<=2026?m.bau(y):gridScn(y)*m.ef(y)/1000+s1(y)};
+  var mkt=function(y){return y<=2026?m.bau(y):gridScn(y)*m.ef(y)/1000*(1-s.rec/100*f(y))+s1(y)};
+  var meets=null;for(var y=2050;y>=Math.max(2027,s.year);y--){var t=m.tgt(y);if(t!==null&&(s.rec>0?mkt(y):loc(y))<=t)meets=y;else break}  /* earliest year from which the scenario stays on or below the target path to 2050 */
+  var load=tot12-kEff,zeb={gross:load/A,net:(load-pvEx-kPv)/A,baseGross:tot12/A,baseNet:(tot12-pvEx)/A};
+  var ef30=m.ef(2030),items=[];
+  var add=function(key,name,kwh,capex,save,t,mk){if(t>0||kwh>0)items.push({key:key,name:name,kwh:kwh,capex:capex,save:save,t:t,mk:!!mk,
+    pay:save>0&&capex>0?capex/save:null,cpt:t>0?(capex/U.life-save)/t:null})};
+  add('pv',tr('Solar PV +'+s.pv+' kWp','Solar PV +'+s.pv+' kWp'),kPv,s.pv*U.pvCapex,kPv*tariff,kPv*ef30/1000);
+  add('cool',tr('Cooling system','ระบบทำความเย็น'),kCool,kCool*U.cool,kCool*tariff,kCool*ef30/1000);
+  add('it','UPS + IT',kIt,kIt*U.it,kIt*tariff,kIt*ef30/1000);
+  add('lt',tr('Lighting','แสงสว่าง'),kLt,kLt*U.lt,kLt*tariff,kLt*ef30/1000);
+  add('plug',tr('Plug loads','เครื่องใช้ไฟฟ้า'),kPl,kPl*U.plug,kPl*tariff,kPl*ef30/1000);
+  var rt=refBau*s.ref/100;
+  add('ref',tr('Refrigerant leaks','สารทำความเย็นรั่ว'),0,rt*U.refCapexPerT,rt*1000/G.r134a*U.refKgPrice,rt);
+  var recKwh=s.rec/100*gridScn(2030),recCost=recKwh/1000*U.recPerMWh;
+  if(s.rec>0)items.push({key:'rec',name:tr('Renewable certificates','ใบรับรองพลังงานหมุนเวียน'),kwh:recKwh,capex:0,save:-recCost,t:recKwh*ef30/1000,mk:true,pay:null,cpt:recKwh*ef30/1000>0?(recCost*-1*-1)/(recKwh*ef30/1000):null});
+  var capex=0,save=0;items.forEach(function(x){capex+=x.capex;save+=x.save});
+  return {m:m,loc:loc,mkt:s.rec>0?mkt:null,meets:meets,zeb:zeb,items:items,capex:capex,save:save,pay:save>0&&capex>0?capex/save:null,
+    kSave:kSave,kPv:kPv,tariff:tariff,ef30:ef30,pvEx:pvEx};
+}
+
+function slRow(d,val){
+  return '<div class="sl"><div class="t"><span>'+ic(d.ic)+tr(d.en,d.th)+'</span><b id="sv_'+d.k+'">'+val+d.unit+'</b></div>'+
+    '<input type="range" data-scn="'+d.k+'" min="'+d.min+'" max="'+d.max+'" step="'+d.step+'" value="'+val+'" aria-label="'+tr(d.en,d.th)+'"></div>';
+}
+function viewScnStatic(){
+  var h='<div class="mut small">'+tr('Move the sliders to test measures. The model, the pathway and the cost update live.','เลื่อนแถบเพื่อทดลองมาตรการ แบบจำลอง เส้นทาง และต้นทุนจะอัปเดตทันที')+'</div>';
+  h+='<div class="presets">'+
+    '<button class="chip" data-preset="bau">'+tr('No action (BAU)','ไม่ทำอะไรเพิ่ม (BAU)')+'</button>'+
+    '<button class="chip" data-preset="eff">'+tr('Efficiency only','เน้นประหยัดพลังงาน')+'</button>'+
+    '<button class="chip" data-preset="bal">'+tr('Balanced plan','แผนสมดุล')+'</button>'+
+    '<button class="chip" data-preset="full">'+tr('Full push + certificates','เต็มกำลัง + ใบรับรอง')+'</button></div>';
+  h+='<div id="scnTop"></div>';
+  SL.forEach(function(d){h+=slRow(d,st.scn[d.k])});
+  h+='<div class="sl"><div class="t"><span>'+ic('trending-down')+tr('Future grid EF decline (scenario)','ค่า EF กริดลดลงในอนาคต (สถานการณ์)')+'</span><b id="sv_efd">'+nf(st.efd*100,1)+tr('% per year','% ต่อปี')+'</b></div>'+
+    '<input type="range" data-efd="1" min="0" max="4" step="0.5" value="'+(st.efd*100)+'" aria-label="'+tr('Future grid EF decline','ค่า EF กริดลดลงในอนาคต')+'"></div>';
+  return h+'<div id="scnDyn"></div>';
+}
+function viewScnTop(){
+  var M=scnModel(),m=M.m,rec=!!M.mkt,cur=function(y){return rec?M.mkt(y):M.loc(y)};
+  var l30=cur(2030),t30=m.tgt(2030),net=st.zebNet,zs=net?M.zeb.net:M.zeb.gross;
+  var h='<div style="margin-top:10px;padding:8px 10px;border:1px solid var(--line);border-radius:10px">';
+  h+='<div class="row"><span>'+tr('Scope 1+2 in 2030','Scope 1+2 ปี 2030')+(rec?tr(' (market-based)',' (market-based)'):'')+'</span><span class="v">'+nf(l30)+' t</span><span class="d '+(l30<=t30?'ok':'bad')+'">'+(l30<=t30?tr('target met','ถึงเป้า'):'+'+nf(l30-t30)+tr(' over',' เกินเป้า'))+'</span></div>';
+  h+='<div class="row"><span>'+tr('On the target path from','อยู่บนเส้นเป้าตั้งแต่ปี')+'</span><span class="v '+(M.meets?'ok':'bad')+'">'+(M.meets?M.meets:tr('not by 2050','ไม่ถึงภายในปี 2050'))+'</span><span class="d"></span></div>';
+  h+='<div class="row"><span>'+tr('SEC after measures ','SEC หลังมาตรการ ')+(net?tr('(net of PV)','(หลังหัก PV)'):tr('(gross)','(ก่อนหัก PV)'))+'</span><span class="v" style="color:'+heatCss(zs)+'">'+nf(zs,1)+'</span><span class="d '+(zs<=ZEB?'ok':'bad')+'">'+(zs<=ZEB?tr('ZEB met','ถึงเป้า ZEB'):tr('ZEB 57','ZEB 57'))+'</span></div>';
+  h+='<div class="row"><span>'+tr('Investment, net saving per year','ลงทุน, ประหยัดสุทธิต่อปี')+'</span><span class="v">'+nf(M.capex/1e6,1)+' / '+nf(M.save/1e6,2)+tr(' M THB',' ล้านบาท')+'</span><span class="d mut">'+(M.pay?nf(M.pay,1)+tr(' yr',' ปี'):'')+'</span></div></div>';
+  return h;
+}
+function viewScnDyn(){
+  var M=scnModel(),m=M.m,s=st.scn,rec=!!M.mkt,h='';
+  var cur=function(y){return rec?M.mkt(y):M.loc(y)};
+  var l30=cur(2030),b30=m.bau(2030);
+  h+='<h3>'+tr('Result details','รายละเอียดผลลัพธ์')+'</h3>';
+  h+='<div class="row"><span>'+tr('Scope 1+2 in 2030 vs BAU','Scope 1+2 ปี 2030 เทียบ BAU')+'</span><span class="v">'+nf(l30)+' t</span><span class="d">'+dTxt((l30-b30)/b30,true)+'</span></div>';
+  h+='<div class="row"><span>'+tr('Scope 1+2 in 2050, scenario','Scope 1+2 ปี 2050 ตามสถานการณ์')+'</span><span class="v">'+nf(cur(2050))+' t</span><span class="d mut">BAU '+nf(m.bau(2050))+'</span></div>';
+  var net=st.zebNet,z0=net?M.zeb.baseNet:M.zeb.baseGross;
+  h+='<div class="row"><span>'+tr('SEC today (last 12 months)','SEC ปัจจุบัน (12 เดือนล่าสุด)')+'</span><span class="v">'+nf(z0,1)+'</span><span class="d mut">'+uSec()+'</span></div>';
+  h+='<div class="row"><span>'+tr('Investment (indicative)','เงินลงทุน (โดยประมาณ)')+'</span><span class="v">'+nf(M.capex/1e6,1)+tr(' M THB',' ล้านบาท')+'</span><span class="d"></span></div>';
+  h+='<div class="row"><span>'+tr('Net saving per year','ประหยัดสุทธิต่อปี')+'</span><span class="v">'+nf(M.save/1e6,2)+tr(' M THB',' ล้านบาท')+'</span><span class="d mut">'+(M.pay?tr('payback ','คืนทุน ')+nf(M.pay,1)+tr(' yr',' ปี'):'')+'</span></div>';
+  h+='<h3>'+tr('Pathway with the scenario','เส้นทางตามสถานการณ์')+'</h3>'+nzChart(m,{loc:M.loc,mkt:M.mkt});
+  h+='<div class="leg" style="margin-top:6px"><span><em style="background:var(--good)"></em>'+tr('Target path','เส้นเป้า')+'</span><span><em style="background:var(--bad)"></em>BAU</span><span><em style="background:var(--grid)"></em>'+tr('Scenario, location-based','สถานการณ์ แบบ location-based')+'</span>'+(rec?'<span><em style="background:var(--grid);opacity:.5"></em>'+tr('Scenario, market-based','สถานการณ์ แบบ market-based')+'</span>':'')+'</div>';
+  h+='<div class="mut small" style="margin-top:4px">'+tr('Base year '+m.bs+', change it in the Net Zero tab. Measures start in '+s.year+' (half effect that year, full after).','ปีฐาน '+m.bs+' เปลี่ยนได้ที่แท็บ Net Zero มาตรการเริ่มปี '+s.year+' (ครึ่งหนึ่งในปีนั้น เต็มที่ปีถัดไป)')+'</div>';
+  h+='<h3>'+tr('Scope 1+2 by year (tCO\u2082e)','Scope 1+2 รายปี (tCO\u2082e)')+'</h3><table class="t sm"><tr><th>'+tr('Year','ปี')+'</th><th>'+tr('Target','เป้า')+'</th><th>BAU</th><th>'+tr('Scenario','สถานการณ์')+'</th>'+(rec?'<th>'+tr('Market','Market')+'</th>':'')+'<th>'+tr('vs target','เทียบเป้า')+'</th></tr>';
+  [2030,2040,2050].forEach(function(y){var t=m.tgt(y),a=M.loc(y),b=rec?M.mkt(y):a,d=b-t;
+    h+='<tr><td>'+y+'</td><td>'+nf(t)+'</td><td>'+nf(m.bau(y))+'</td><td>'+nf(a)+'</td>'+(rec?'<td>'+nf(b)+'</td>':'')+'<td class="'+(d<=0?'ok':'bad')+'"><b>'+(d<=0?tr('met','ถึงเป้า'):'+'+nf(d))+'</b></td></tr>'});
+  h+='</table>';
+  if(M.items.length){
+    h+='<h3>'+tr('Measures (at 2030 grid EF)','รายมาตรการ (ที่ EF กริดปี 2030)')+'</h3><table class="t sm"><tr><th>'+tr('Measure','มาตรการ')+'</th><th>'+tr('Capex M','ลงทุน ล้าน')+'</th><th>'+tr('Payback','คืนทุน')+'</th><th>tCO\u2082e/'+tr('yr','ปี')+'</th><th>THB/t</th></tr>';
+    M.items.forEach(function(x){
+      h+='<tr><td>'+x.name+(x.mk?' *':'')+'</td><td>'+(x.capex?nf(x.capex/1e6,1):'\u2013')+'</td><td>'+(x.pay?nf(x.pay,1)+tr(' yr',' ปี'):'\u2013')+'</td><td>'+nf(x.t,0)+'</td><td class="'+(x.cpt!==null&&x.cpt<0?'ok':'')+'">'+(x.cpt===null?'\u2013':nf(x.cpt,0))+'</td></tr>'});
+    h+='</table><div class="mut small" style="margin-top:3px">'+tr('THB/t = levelised cost per tCO\u2082e over '+UNIT.life+' years (negative = saves money). * market-based only: certificates change reported Scope 2, not physical use.','THB/t = ต้นทุนเฉลี่ยต่อ tCO\u2082e ตลอด '+UNIT.life+' ปี (ติดลบ = ประหยัดเงิน) * เฉพาะ market-based: ใบรับรองเปลี่ยนตัวเลข Scope 2 ที่รายงาน ไม่ได้ลดไฟที่ใช้จริง')+'</div>';
+  }
+  h+=noteBox(tr('Assumptions (indicative, not quotations)','สมมติฐาน (โดยประมาณ ไม่ใช่ใบเสนอราคา)'),[
+    tr('Solar PV: '+nf(UNIT.pvCapex)+' THB/kWp, '+nf(UNIT.pvYield)+' kWh/kWp\u00B7yr.','Solar PV: '+nf(UNIT.pvCapex)+' บาท/kWp ผลิต '+nf(UNIT.pvYield)+' kWh/kWp\u00B7ปี'),
+    tr('Per kWh/yr saved: cooling '+UNIT.cool+', UPS + IT '+UNIT.it+', lighting '+UNIT.lt+', plug loads '+UNIT.plug+' THB.','ต่อ kWh/ปีที่ประหยัด: ระบบทำความเย็น '+UNIT.cool+', UPS + IT '+UNIT.it+', แสงสว่าง '+UNIT.lt+', เครื่องใช้ไฟฟ้า '+UNIT.plug+' บาท'),
+    tr('Refrigerant: '+nf(UNIT.refCapexPerT)+' THB per tCO\u2082e/yr avoided, '+UNIT.refKgPrice+' THB/kg.','สารทำความเย็น: '+nf(UNIT.refCapexPerT)+' บาทต่อ tCO\u2082e/ปีที่ลด และ '+UNIT.refKgPrice+' บาท/กก.'),
+    tr('Certificates: '+UNIT.recPerMWh+' THB/MWh. Electricity: '+nf(M.tariff,2)+' THB/kWh (last 12 months).','ใบรับรอง: '+UNIT.recPerMWh+' บาท/MWh ค่าไฟ: '+nf(M.tariff,2)+' บาท/kWh (เฉลี่ย 12 เดือนล่าสุด)'),
+    tr('Extra Solar PV: about 350 kWp on the tower roof, the rest as a car-park canopy (shown in 3D).','Solar PV ที่เพิ่ม: ประมาณ 350 kWp บนหลังคาตึก ที่เหลือเป็นหลังคาที่จอดรถ (แสดงใน 3 มิติ)'),
+    tr('Replace these with real quotations before using the figures.','ควรแทนด้วยใบเสนอราคาจริงก่อนใช้ตัวเลข')]);
+  return h;
+}
+
+var bodyEl=$('#body');
+function setTab(t){
+  st.tab=t;
+  document.querySelectorAll('.tab').forEach(function(b){b.setAttribute('aria-selected',b.dataset.tab===t)});
+  bodyEl.innerHTML=t==='netzero'?nzStatic():t==='scenario'?viewScnStatic():'';
+  bodyEl.scrollTop=0;
+  if(t==='scenario'&&!st.scnView){st.scnView=true;pressed('#cScn',true);apply();return}
+  updatePanel();
+}
+function updatePanel(){
+  var t=st.tab,sc=bodyEl.scrollTop;
+  if(t==='overview')bodyEl.innerHTML=viewOverview();
+  else if(t==='zeb')bodyEl.innerHTML=viewZeb();
+  else if(t==='netzero'){var d=$('#nzDyn');if(!d){bodyEl.innerHTML=nzStatic();d=$('#nzDyn')}d.innerHTML=viewNzDyn()}
+  else if(t==='scenario'){var e=$('#scnDyn');if(!e){bodyEl.innerHTML=viewScnStatic();e=$('#scnDyn')}e.innerHTML=viewScnDyn();$('#scnTop').innerHTML=viewScnTop()}
+  else if(t==='floors')bodyEl.innerHTML=viewFloors();
+  bodyEl.scrollTop=sc;
+}
+document.querySelectorAll('.tab').forEach(function(b){b.addEventListener('click',function(){setTab(b.dataset.tab)})});
+bodyEl.addEventListener('click',function(e){
+  var pr=e.target.closest('[data-preset]');
+  if(pr){st.scn=Object.assign({},PRESETS[pr.dataset.preset]);st.scnView=true;pressed('#cScn',true);bodyEl.innerHTML=viewScnStatic();apply();return}
+  var fi=e.target.closest('[data-i]');if(fi){selectFloor(parseInt(fi.dataset.i,10),true);return}
+  var c=e.target.closest('[data-chart]');
+  if(c){var r=c.getBoundingClientRect(),W=+c.dataset.w,pl=+c.dataset.pl,pr=+c.dataset.pr;
+    var x=(e.clientX-r.left)/r.width*W;setIdx(Math.round(clamp((x-pl)/(W-pl-pr),0,1)*(N-1)))}
+});
+bodyEl.addEventListener('input',function(e){
+  var t=e.target;
+  if(t.dataset&&t.dataset.scn){
+    var k=t.dataset.scn,d=SL.filter(function(x){return x.k===k})[0];st.scn[k]=+t.value;$('#sv_'+k).textContent=t.value+d.unit;
+    if(!st.scnView){st.scnView=true;pressed('#cScn',true)}apply();
+  }else if(t.hasAttribute&&t.hasAttribute('data-efd')){
+    st.efd=+t.value/100;$('#sv_efd').textContent=nf(+t.value,1)+tr('% per year','% ต่อปี');updatePanel();
+  }
+});
+bodyEl.addEventListener('change',function(e){
+  if(e.target.hasAttribute&&e.target.hasAttribute('data-zebnet')){st.zebNet=e.target.checked;updatePanel();return}
+  if(e.target.id==='selBase'){st.base=parseInt(e.target.value,10);updatePanel()}
+  if(e.target.id==='selEf'){st.efd=parseFloat(e.target.value);updatePanel()}
+});
+bodyEl.addEventListener('mouseover',function(e){var r=e.target.closest('.frow');if(r){st.hov=parseInt(r.dataset.i,10);styleFloors()}});
+bodyEl.addEventListener('mouseleave',function(){if(st.hov!==-1){st.hov=-1;styleFloors()}});
+
+/* ====================================================== timeline UI */
+var slider=$('#slider');
+function buildTicks(){
+  var t=$('#ticks'),y=$('#yrs'),h='',s='';
+  D.events.forEach(function(e){var p=e.i/(N-1)*100;h+='<button class="'+e.k+'" style="left:calc('+p+'% + '+((0.5-p/100)*16)+'px)" data-ev="'+e.i+'" title="'+lbl(e.i)+': '+evName(e)+'" aria-label="'+lbl(e.i)+': '+evName(e)+'"></button>'});
+  t.innerHTML=h;
+  for(var yr=2020;yr<=2026;yr++){var p=((yr-2020)*12)/(N-1)*100;s+='<span style="left:calc('+p+'% + '+((0.5-p/100)*16)+'px)">'+yr+'</span>'}
+  y.innerHTML=s;
+}
+$('#ticks').addEventListener('click',function(e){var b=e.target.closest('[data-ev]');if(b)setIdx(parseInt(b.dataset.ev,10))});
+slider.addEventListener('input',function(){setIdx(parseInt(slider.value,10))});
+var playBtn=$('#play');
+var ICON_PLAY='<svg viewBox="0 0 16 16"><path d="M3 1.5v13l11-6.5z"/></svg>',ICON_PAUSE='<svg viewBox="0 0 16 16"><path d="M3 2h3.5v12H3zM9.5 2H13v12H9.5z"/></svg>';
+var panelOpen=true;
+function updPanelBtn(){
+  var m=!matchMedia('(min-width:641px)').matches,n=m?(panelOpen?'panel-bottom-close':'panel-bottom-open'):(panelOpen?'panel-right-close':'panel-right-open');
+  var b=$('#panelBtn'),t=panelOpen?tr('Hide data panel','ซ่อนแผงข้อมูล'):tr('Show data panel','แสดงแผงข้อมูล');
+  b.innerHTML=ic(n);b.setAttribute('aria-label',t);b.setAttribute('title',t);b.setAttribute('aria-expanded',panelOpen?'true':'false');
+}
+$('#panelBtn').addEventListener('click',function(){panelOpen=!panelOpen;$('#main').classList.toggle('nopanel',!panelOpen);updPanelBtn()});
+matchMedia('(min-width:641px)').addEventListener('change',updPanelBtn);
+function setPlayIcon(){playBtn.innerHTML=st.play?ICON_PAUSE:ICON_PLAY;playBtn.setAttribute('aria-label',st.play?tr('Pause timeline','หยุดไทม์ไลน์'):tr('Play timeline','เล่นไทม์ไลน์'))}
+playBtn.addEventListener('click',function(){
+  st.play=!st.play;setPlayIcon();
+  if(st.play&&st.idx>=LAST)setIdx(0);playAcc=0;
+});
+var playAcc=0;
+function setIdx(k){st.idx=clamp(k,0,LAST);apply()}
+function evText(k){
+  var best=null;D.events.forEach(function(e){if(e.i<=k&&k-e.i<=2)best=e});
+  if(best)return (best.i===k?tr('Event: ','เหตุการณ์: '):tr('Since '+lbl(best.i)+': ','เมื่อ '+lbl(best.i)+': '))+evName(best);
+  return tr('Drag the timeline or press play. Coloured marks show key events.','เลื่อนไทม์ไลน์หรือกดเล่น จุดสีบนแถบคือเหตุการณ์สำคัญ');
+}
+
+/* ====================================================== controls */
+function pressed(id,v){$(id).setAttribute('aria-pressed',v?'true':'false')}
+$('#mEnergy').addEventListener('click',function(){st.mode='energy';pressed('#mEnergy',1);pressed('#mCarbon',0);apply()});
+$('#mCarbon').addEventListener('click',function(){st.mode='carbon';pressed('#mEnergy',0);pressed('#mCarbon',1);apply()});
+$('#cXray').addEventListener('click',function(){st.xray=!st.xray;pressed('#cXray',st.xray);styleFloors()});
+$('#cExplode').addEventListener('click',function(){st.explode=!st.explode;pressed('#cExplode',st.explode)});
+$('#cRotate').addEventListener('click',function(){st.rotate=!st.rotate;pressed('#cRotate',st.rotate)});
+$('#cScn').addEventListener('click',function(){st.scnView=!st.scnView;pressed('#cScn',st.scnView);apply()});
+$('#cLabels').addEventListener('click',function(){st.labels=!st.labels;pressed('#cLabels',st.labels);$('#tags').style.display=st.labels?'block':'none'});
+pressed('#cRotate',st.rotate);pressed('#cLabels',st.labels);pressed('#cScn',st.scnView);$('#tags').style.display=st.labels?'block':'none';
+function selectFloor(i,fromList){
+  st.sel=(i===st.sel||i<0)?-1:i;
+  if(st.sel>=0&&st.tab!=='floors'&&!fromList)setTab('floors');else updatePanel();
+  styleFloors();
+}
+function setLang(l){
+  if(l===LANG)return;LANG=l;applyLang();buildTicks();
+  if(st.tab==='netzero'||st.tab==='scenario')bodyEl.innerHTML='';
+  apply();
+}
+$('#lEn').addEventListener('click',function(){setLang('en')});
+$('#lTh').addEventListener('click',function(){setLang('th')});
+$('#btnTheme').addEventListener('click',function(){
+  var r=document.documentElement,dark=getComputedStyle(r).getPropertyValue('--is-dark').trim()==='1';
+  r.setAttribute('data-theme',dark?'light':'dark');themeIcon();applyTheme();apply();
+});
+if(window.matchMedia)matchMedia('(prefers-color-scheme: dark)').addEventListener('change',function(){themeIcon();applyTheme();apply()});
+
+function updLegend(){
+  var k=st.idx,sc=st.mode==='energy'?1:B.ef[k],ticks=[0,57,100,150,250],mx=300;
+  var g=STOPS.map(function(s){return rgbCss(s[1])+' '+Math.min(100,s[0]/mx*100)+'%'}).join(',');
+  var unit=st.mode==='energy'?uSec():uC();
+  var h='<div>'+(st.scnView?'<b>'+tr('After measures: ','หลังปรับปรุง: ')+'</b>':'')+tr('Colour of each floor (','สีของแต่ละชั้น (')+unit+tr(', annualised)',', ปรับเป็นรายปี)')+'</div><div class="mut small" style="color:var(--good)">'+tr('Green number = ZEB target 57 kWh/m\u00B2\u00B7yr','เลขสีเขียว = เป้า ZEB 57 kWh/m\u00B2\u00B7ปี')+(st.mode==='energy'?'':tr(' (equivalent to '+nf(57*sc,0)+' kg'+CO2+'e)',' (เทียบเท่า '+nf(57*sc,0)+' kg'+CO2+'e)'))+'</div><div class="bar" style="background:linear-gradient(90deg,'+g+')"></div><div class="tk">';
+  ticks.forEach(function(t){h+='<span'+(t===57?' class="z"':'')+' style="left:'+(t/mx*100)+'%">'+nf(t*sc,0)+'</span>'});
+  $('#legend').innerHTML=h+'</div>';
+}
+
+/* ====================================================== 3D scene */
+var GL=null;
+var camera,renderer,scene;
+var FM=[],pvPanels=[],pvScn=[],pvMat,racks=[],chillers=[],fans=[],genMesh,groundMat,ghostGround=false;
+var ventPlume,flowA,tags=[];
+var cam={theta:0.62,phi:1.12,r:36,tx:-2.2,ty:5.0,tz:1.0};
+var exCur=0,flowT=0,bldMats=[];
+var seed=11;function rnd(){seed=(seed*16807)%2147483647;return seed/2147483647}
+
+function applyTheme(){
+  if(!GL)return;
+  var cs=getComputedStyle(document.documentElement),v=function(n){return cs.getPropertyValue(n).trim()};
+  var dark=v('--is-dark')==='1',sky=new THREE.Color(v('--sky'));
+  scene.background=sky;scene.fog=new THREE.Fog(sky,70,230);
+  groundMat.color.set(v('--ground'));GL.plaza.color.set(v('--plaza'));GL.road.color.set(v('--road'));
+  GL.slab.color.set(v('--slab'));GL.roof.color.set(v('--roof'));GL.parapet.color.set(v('--roof')).offsetHSL(0,0,dark?0.05:-0.07);GL.edge.color.set(v('--edge'));GL.edge.opacity=dark?0.35:0.3;
+  GL.hemi.intensity=dark?0.62:0.55;GL.sun.intensity=dark?0.5:0.8;GL.hemi.groundColor.set(dark?0x1a2620:0x9aa59f);
+  bldMats.forEach(function(b){b.m.color.set(v('--bld')).offsetHSL(0,0,b.j)});
+  GL.dark=dark;
+  styleFloors();
+}
+
+function facadeTex(){
+  /* coarse, low-contrast pane pattern + mipmaps + anisotropy: keeps the facade from shimmering when the camera moves */
+  var c=document.createElement('canvas');c.width=512;c.height=128;var g=c.getContext('2d');
+  g.fillStyle='#ffffff';g.fillRect(0,0,512,128);
+  for(var i=0;i<4;i++){g.fillStyle='rgba(18,38,48,0.20)';g.fillRect(i*128+10,20,108,88);g.fillStyle='rgba(255,255,255,0.22)';g.fillRect(i*128+14,24,36,80)}
+  var t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(2,1);
+  t.generateMipmaps=true;t.minFilter=THREE.LinearMipmapLinearFilter;t.magFilter=THREE.LinearFilter;
+  t.anisotropy=renderer.capabilities.getMaxAnisotropy();return t;
+}
+function panelTex(){
+  var c=document.createElement('canvas');c.width=64;c.height=64;var g=c.getContext('2d');
+  g.fillStyle='#ffffff';g.fillRect(0,0,64,64);g.strokeStyle='rgba(180,200,235,0.65)';g.lineWidth=1.5;
+  for(var i=0;i<=6;i++){g.beginPath();g.moveTo(i*64/6,0);g.lineTo(i*64/6,64);g.stroke()}
+  for(var j=0;j<=4;j++){g.beginPath();g.moveTo(0,j*16);g.lineTo(64,j*16);g.stroke()}
+  var t=new THREE.CanvasTexture(c);t.anisotropy=renderer.capabilities.getMaxAnisotropy();return t;
+}
+var PSHADER_V='attribute float aSize;attribute float aAlpha;uniform float uScale;varying float vA;void main(){vA=aAlpha;vec4 mv=modelViewMatrix*vec4(position,1.0);gl_PointSize=max(1.0,aSize*uScale/-mv.z);gl_Position=projectionMatrix*mv;}';
+var PSHADER_F='uniform vec3 uColor;varying float vA;void main(){float d=length(gl_PointCoord-vec2(0.5));if(d>0.5)discard;gl_FragColor=vec4(uColor,vA*smoothstep(0.5,0.12,d));}';
+var pointMats=[];
+function pointsMat(color){var m=new THREE.ShaderMaterial({uniforms:{uColor:{value:new THREE.Color(color)},uScale:{value:600}},vertexShader:PSHADER_V,fragmentShader:PSHADER_F,transparent:true,depthWrite:false});pointMats.push(m);return m}
+function makePlume(origin,color,max,o){
+  var pos=new Float32Array(max*3),siz=new Float32Array(max),alp=new Float32Array(max),age=new Float32Array(max),life=new Float32Array(max),jit=new Float32Array(max*3);
+  for(var i=0;i<max;i++){life[i]=o.life*(0.7+0.6*rnd());age[i]=rnd()*life[i];jit[i*3]=rnd()-.5;jit[i*3+1]=rnd()-.5;jit[i*3+2]=rnd()-.5}
+  var g=new THREE.BufferGeometry();
+  g.setAttribute('position',new THREE.BufferAttribute(pos,3));g.setAttribute('aSize',new THREE.BufferAttribute(siz,1));g.setAttribute('aAlpha',new THREE.BufferAttribute(alp,1));
+  var pts=new THREE.Points(g,pointsMat(color));pts.frustumCulled=false;scene.add(pts);
+  var P={rate:0.3,cur:0.3,update:function(dt){
+    P.cur+=(P.rate-P.cur)*Math.min(1,dt*3);var act=Math.round(P.cur*max);
+    for(var i=0;i<max;i++){
+      age[i]+=dt;if(age[i]>life[i]){age[i]=0;life[i]=o.life*(0.7+0.6*rnd())}
+      var a=age[i]/life[i],sp=1+a*3;
+      pos[i*3]=origin.x+o.wind.x*age[i]+jit[i*3]*0.3*sp;
+      pos[i*3+1]=origin.y+o.rise*age[i]*(1-0.35*a)+jit[i*3+1]*0.2;
+      pos[i*3+2]=origin.z+o.wind.z*age[i]+jit[i*3+2]*0.3*sp;
+      alp[i]=i<act?(a<0.12?a/0.12:1-a)*o.alpha:0;
+      siz[i]=o.size*(1+a*o.grow);
+    }
+    g.attributes.position.needsUpdate=true;g.attributes.aSize.needsUpdate=true;g.attributes.aAlpha.needsUpdate=true;
+  }};
+  return P;
+}
+function makeFlow(curve,color,count){
+  var pos=new Float32Array(count*3),siz=new Float32Array(count).fill(0.16),alp=new Float32Array(count).fill(0.95);
+  var g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(pos,3));g.setAttribute('aSize',new THREE.BufferAttribute(siz,1));g.setAttribute('aAlpha',new THREE.BufferAttribute(alp,1));
+  var pts=new THREE.Points(g,pointsMat(color));pts.frustumCulled=false;scene.add(pts);
+  var v=new THREE.Vector3();
+  return {update:function(t){for(var i=0;i<count;i++){curve.getPoint((i/count+t)%1,v);pos[i*3]=v.x;pos[i*3+1]=v.y;pos[i*3+2]=v.z}g.attributes.position.needsUpdate=true}}
+}
+function polyMat(m,f,u){m.polygonOffset=true;m.polygonOffsetFactor=f;m.polygonOffsetUnits=u;return m}
+
+function initScene(){
+  if(typeof THREE==='undefined')throw new Error('no three');
+  var canvas=$('#gl');
+  renderer=new THREE.WebGLRenderer({canvas:canvas,antialias:true});
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
+  renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+  scene=new THREE.Scene();
+  /* near plane at 1 (not 0.1): far more depth precision, so flat layers no longer fight each other */
+  camera=new THREE.PerspectiveCamera(38,1,1,420);
+  GL={};
+  GL.hemi=new THREE.HemisphereLight(0xffffff,0x9aa59f,0.55);scene.add(GL.hemi);
+  GL.sun=new THREE.DirectionalLight(0xfff3df,0.8);GL.sun.position.set(18,30,14);GL.sun.castShadow=true;
+  var ms=window.innerWidth<700?1024:2048;GL.sun.shadow.mapSize.set(ms,ms);
+  var sc=GL.sun.shadow.camera;sc.left=-28;sc.right=28;sc.top=28;sc.bottom=-28;sc.near=1;sc.far=100;
+  GL.sun.shadow.bias=-0.0015;GL.sun.shadow.normalBias=0.05;scene.add(GL.sun);
+
+  /* ground with a hole over the basement */
+  groundMat=new THREE.MeshStandardMaterial({color:0xb4c2ba,roughness:1,metalness:0,transparent:true});
+  var sh=new THREE.Shape();sh.moveTo(-300,-300);sh.lineTo(300,-300);sh.lineTo(300,300);sh.lineTo(-300,300);sh.lineTo(-300,-300);
+  var hole=new THREE.Path();hole.moveTo(-5.4,-3.7);hole.lineTo(-5.4,3.7);hole.lineTo(5.4,3.7);hole.lineTo(5.4,-3.7);hole.lineTo(-5.4,-3.7);sh.holes.push(hole);
+  var gnd=new THREE.Mesh(new THREE.ShapeGeometry(sh),groundMat);gnd.rotation.x=-Math.PI/2;gnd.receiveShadow=true;scene.add(gnd);
+  GL.plaza=polyMat(new THREE.MeshStandardMaterial({color:0xcdd8d2,roughness:1}),-1,-1);
+  var plaza=new THREE.Mesh(new THREE.PlaneGeometry(17,12.5),GL.plaza);plaza.rotation.x=-Math.PI/2;plaza.position.set(0,0.03,0.6);plaza.receiveShadow=true;scene.add(plaza);
+  GL.road=polyMat(new THREE.MeshStandardMaterial({color:0x7e8a84,roughness:1}),-2,-2);
+  var rA=new THREE.Mesh(new THREE.PlaneGeometry(300,3.4),GL.road);rA.rotation.x=-Math.PI/2;rA.position.set(0,0.05,11.5);rA.receiveShadow=true;scene.add(rA);
+  var rB=new THREE.Mesh(new THREE.PlaneGeometry(3.4,300),GL.road);rB.rotation.x=-Math.PI/2;rB.position.set(15,0.05,0);rB.receiveShadow=true;scene.add(rB);
+  var dashM=polyMat(new THREE.MeshBasicMaterial({color:0xf2f2ea}),-4,-4);
+  for(var d=-40;d<=40;d++){var a=new THREE.Mesh(new THREE.PlaneGeometry(0.9,0.12),dashM);a.rotation.x=-Math.PI/2;a.position.set(d*3.4,0.07,11.5);scene.add(a)}
+  for(d=-40;d<=40;d++){var b=new THREE.Mesh(new THREE.PlaneGeometry(0.12,0.9),dashM);b.rotation.x=-Math.PI/2;b.position.set(15,0.07,d*3.4);scene.add(b)}
+  /* neighbourhood */
+  var bgeo=new THREE.BoxGeometry(1,1,1);
+  for(var gx=-7;gx<=7;gx++)for(var gz=-7;gz<=7;gz++){
+    var cx=gx*10+(rnd()-.5)*2,cz=gz*10+(rnd()-.5)*2;
+    if(Math.abs(cx)<14&&Math.abs(cz)<10)continue;
+    if(Math.abs(cz-11.5)<4.5||Math.abs(cx-15)<4.5)continue;
+    if(Math.hypot(cx+12,cz-7)<7)continue;
+    if(rnd()<0.25)continue;
+    var w=3.2+rnd()*3.4,dd=3.2+rnd()*3.4,hh=0.9+Math.pow(rnd(),2)*(Math.abs(cx)+Math.abs(cz)<40?7:3.5);
+    var m=new THREE.MeshStandardMaterial({color:0xa6b5ad,roughness:0.9});bldMats.push({m:m,j:(rnd()-.5)*0.08});
+    var mesh=new THREE.Mesh(bgeo,m);mesh.scale.set(w,hh,dd);mesh.position.set(cx,hh/2,cz);mesh.castShadow=true;mesh.receiveShadow=true;scene.add(mesh);
+  }
+  var trunkM=new THREE.MeshStandardMaterial({color:0x6b5b45,roughness:1}),leafM=new THREE.MeshStandardMaterial({color:0x3f8f5b,roughness:1});
+  for(var t=0;t<30;t++){var tx=-9+t*0.65*(rnd()+0.6),tz=(t%2?7.4:-6.6)+(rnd()-.5)*1.2;if(Math.abs(tx)>10)tx=(rnd()-.5)*20;
+    var tr1=new THREE.Mesh(new THREE.CylinderGeometry(0.05,0.07,0.5,6),trunkM);tr1.position.set(tx,0.28,tz);scene.add(tr1);
+    var lf=new THREE.Mesh(new THREE.SphereGeometry(0.34+rnd()*0.12,10,8),leafM);lf.position.set(tx,0.78,tz);lf.castShadow=true;scene.add(lf)}
+
+  /* ----- building floors.
+     Z-fighting fixes: every floor body is 8 mm shorter than its slot (no two floors share a face),
+     the slab straddles the floor line instead of sitting flush with the body top,
+     edge lines are scaled 0.3% outward, and bodies draw in a stable bottom-to-top order. */
+  GL.slab=new THREE.MeshStandardMaterial({color:0xe6ece8,roughness:0.8});
+  GL.roof=new THREE.MeshStandardMaterial({color:0x8d9893,roughness:0.95});
+  GL.parapet=new THREE.MeshStandardMaterial({color:0x7d8883,roughness:0.9});
+  GL.edge=new THREE.LineBasicMaterial({color:0x2b3b34,transparent:true,opacity:0.3});
+  var fTex=facadeTex(),coreM=new THREE.MeshStandardMaterial({color:0x5b6a64,roughness:0.7});
+  var riserM=new THREE.MeshStandardMaterial({color:0x3b8fd0,emissive:0x1a4f80,emissiveIntensity:0.5,roughness:0.5});
+  var y=-1.0,PW=10.5,PD=7.2,TW=6.4,TD=5.0,TCX=-1.2,TCZ=-0.5;
+  FL.forEach(function(f,i){
+    var id=f.id,h=(id==='B2'||id==='B1')?0.5:id==='F1'?0.8:(id==='F2'||id==='F3'||id==='F4')?0.62:0.58;
+    var tower=i>=6,w=tower?TW:PW,d=tower?TD:PD,cx=tower?TCX:0,cz=tower?TCZ:0;
+    var grp=new THREE.Group();scene.add(grp);
+    var mat=new THREE.MeshStandardMaterial({color:0x25a85f,map:fTex,roughness:0.35,metalness:0.12,transparent:true,opacity:0.93,emissive:0x25a85f,emissiveIntensity:0.12});
+    var body=new THREE.Mesh(new THREE.BoxGeometry(w,h-0.008,d),mat);body.position.set(cx,y+h/2,cz);body.castShadow=true;body.receiveShadow=true;body.userData.i=i;body.renderOrder=i;grp.add(body);
+    var edges=new THREE.LineSegments(new THREE.EdgesGeometry(body.geometry),GL.edge);edges.position.copy(body.position);edges.scale.set(1.003,1.003,1.003);edges.renderOrder=i;grp.add(edges);
+    var isRoof=(i===5||i===NF-1);
+    var slab=new THREE.Mesh(new THREE.BoxGeometry(w+0.12,0.04,d+0.12),isRoof?GL.roof:GL.slab);slab.position.set(cx,y+h,cz);slab.castShadow=true;slab.receiveShadow=true;grp.add(slab);
+    if(isRoof){ /* grey roof deck with a low parapet round the edge */
+      var py=y+h+0.02+0.07;
+      [[w+0.12,0.07,cx,cz-(d/2+0.025)],[w+0.12,0.07,cx,cz+(d/2+0.025)]].forEach(function(q){var pb=new THREE.Mesh(new THREE.BoxGeometry(q[0],0.14,q[1]),GL.parapet);pb.position.set(q[2],py,q[3]);pb.castShadow=true;grp.add(pb)});
+      [-1,1].forEach(function(sg){var pb=new THREE.Mesh(new THREE.BoxGeometry(0.07,0.14,d+0.12),GL.parapet);pb.position.set(cx+sg*(w/2+0.025),py,cz);pb.castShadow=true;grp.add(pb)});
+    }
+    var riser=new THREE.Mesh(new THREE.CylinderGeometry(0.035,0.035,h*0.96,8),riserM);riser.position.set(1.75,y+h/2,-1.4);grp.add(riser);
+    if(tower){var core=new THREE.Mesh(new THREE.BoxGeometry(1.6,h*0.94,1.4),coreM);core.position.set(TCX,y+h/2,TCZ);grp.add(core)}
+    FM.push({grp:grp,body:body,mat:mat,y0:y,h:h,col:[37,168,95],tcol:[37,168,95],w:w,d:d,cx:cx,cz:cz});
+    y+=h;
+  });
+  var topY=y+0.02,podTop=FM[5].y0+FM[5].h+0.02;
+  /* roof of tower: core cap, cooling towers, mast */
+  var g20=FM[NF-1].grp;
+  var cap=new THREE.Mesh(new THREE.BoxGeometry(1.6,0.7,1.4),coreM);cap.position.set(TCX,topY+0.35,TCZ);cap.castShadow=true;g20.add(cap);
+  var ctM=new THREE.MeshStandardMaterial({color:0x9aa8a2,roughness:0.6}),fanM=new THREE.MeshStandardMaterial({color:0x333c38,roughness:0.5});
+  [0.25,1.0,1.75].forEach(function(x){
+    var ct=new THREE.Mesh(new THREE.BoxGeometry(0.62,0.5,0.62),ctM);ct.position.set(x,topY+0.25,-1.9);ct.castShadow=true;g20.add(ct);
+    var fan=new THREE.Group();fan.position.set(x,topY+0.53,-1.9);
+    [0,Math.PI/2].forEach(function(r){var bl=new THREE.Mesh(new THREE.BoxGeometry(0.5,0.015,0.07),fanM);bl.rotation.y=r;fan.add(bl)});g20.add(fan);fans.push(fan)});
+  var mast=new THREE.Mesh(new THREE.CylinderGeometry(0.03,0.04,1.8,6),new THREE.MeshStandardMaterial({color:0x777777,metalness:0.8}));mast.position.set(-3.8,topY+0.9,-2.4);g20.add(mast);
+  GL.tip=new THREE.Mesh(new THREE.SphereGeometry(0.07,8,8),new THREE.MeshBasicMaterial({color:0xef4444}));GL.tip.position.set(-3.8,topY+1.82,-2.4);g20.add(GL.tip);
+  /* PV on podium roof */
+  var g4=FM[5].grp,pTex=panelTex();
+  pvMat=new THREE.MeshStandardMaterial({color:0x2a4f80,map:pTex,roughness:0.25,metalness:0.55,emissive:0x1b4a96,emissiveIntensity:0.3});
+  var slots=[],xs=[2.75,3.4,4.05,4.7];
+  for(var r=0;r<9;r++)xs.forEach(function(x){slots.push([x,-3.2+r*0.8])});
+  [-4.3,-3.2,-2.1,-1.0,0.1,1.2].forEach(function(x){slots.push([x,2.85])});
+  slots.forEach(function(p){var pm=new THREE.Mesh(new THREE.BoxGeometry(0.56,0.03,0.5),pvMat);pm.position.set(p[0],podTop+0.14,p[1]);pm.rotation.x=-0.25;pm.castShadow=true;g4.add(pm);pvPanels.push(pm)});
+  /* scenario Solar PV: extra panels on the tower roof, then a car-park canopy (shown with 'After measures') */
+  var scM=new THREE.MeshStandardMaterial({color:0x1f7a8c,map:pTex,roughness:0.25,metalness:0.55,emissive:0x0d6b80,emissiveIntensity:0.45});
+  var roofSl=[];
+  [-4.0,-3.35,-2.7,-2.05,-1.4,-0.75,-0.1,0.55,1.2,1.85-0.15].forEach(function(x){[0.75,1.4].forEach(function(z){roofSl.push([x,z])})});
+  [-3.9,-3.25].forEach(function(x){[-1.7,-1.1,-0.5,0.1].forEach(function(z){roofSl.push([x,z])})});
+  [0.3,0.95,1.6].forEach(function(x){[-1.1,-0.5,0.1].forEach(function(z){roofSl.push([x,z])})});
+  roofSl=roofSl.slice(0,35);
+  roofSl.forEach(function(p){var pm3=new THREE.Mesh(new THREE.BoxGeometry(0.56,0.03,0.5),scM);pm3.position.set(p[0],topY+0.14,p[1]);pm3.rotation.x=-0.25;pm3.castShadow=true;g20.add(pm3);pvScn.push(pm3)});
+  GL.canopy=new THREE.Group();scene.add(GL.canopy);
+  var postM=new THREE.MeshStandardMaterial({color:0x6b7873,roughness:0.6});
+  [4.3,4.95,5.6].forEach(function(z){
+    for(var c=0;c<14;c++){var x=-5.2+c*0.8,pm4=new THREE.Mesh(new THREE.BoxGeometry(0.56,0.03,0.5),scM);pm4.position.set(x,1.05,z);pm4.rotation.x=-0.25;pm4.castShadow=true;GL.canopy.add(pm4);pvScn.push(pm4)}
+    [-5.4,-2.6,0.2,3.0,5.4].forEach(function(x){var po=new THREE.Mesh(new THREE.CylinderGeometry(0.04,0.04,1.02,6),postM);po.position.set(x,0.51,z);GL.canopy.add(po)});
+  });
+  /* genset vent stack */
+  var stack=new THREE.Mesh(new THREE.CylinderGeometry(0.07,0.09,0.9,8),new THREE.MeshStandardMaterial({color:0x6b6f6d,metalness:0.6}));stack.position.set(-4.9,podTop+0.45,3.25);stack.castShadow=true;g4.add(stack);
+  /* basement plant: chillers, pumps, genset */
+  var gB2=FM[0].grp,gB1=FM[1].grp,chM=new THREE.MeshStandardMaterial({color:0x7aa3c4,roughness:0.4,metalness:0.4,emissive:0x1d5f9a,emissiveIntensity:0.4});
+  [-2.4,-1.7,-1.0].forEach(function(z){var c=new THREE.Mesh(new THREE.CylinderGeometry(0.17,0.17,1.5,16),chM);c.rotation.z=Math.PI/2;c.position.set(-3.5,-0.78,z);gB2.add(c);chillers.push(c)});
+  [-2.4,-1.7,-1.0].forEach(function(z){var p=new THREE.Mesh(new THREE.BoxGeometry(0.3,0.22,0.3),ctM);p.position.set(-2.1,-0.87,z);gB2.add(p)});
+  genMesh=new THREE.Mesh(new THREE.BoxGeometry(1.3,0.3,0.55),new THREE.MeshStandardMaterial({color:0xe0892b,roughness:0.5,emissive:0xb04a10,emissiveIntensity:0.15}));genMesh.position.set(-4.4,-0.3,-2.9);gB1.add(genMesh);
+  /* data room racks on F5 */
+  var gF5=FM[6].grp,rkM=new THREE.MeshStandardMaterial({color:0x6a56c0,roughness:0.4,emissive:0x5a3fd0,emissiveIntensity:0.6});
+  for(var rr=0;rr<2;rr++)for(var cc=0;cc<7;cc++){var rk=new THREE.Mesh(new THREE.BoxGeometry(0.3,0.42,0.26),rkM);rk.position.set(-3.6+cc*0.52,FM[6].y0+0.23,-2.3+rr*0.75);gF5.add(rk);racks.push(rk)}
+  var ups=new THREE.Mesh(new THREE.BoxGeometry(0.7,0.44,0.5),rkM);ups.position.set(0.8,FM[6].y0+0.24,-2.0);gF5.add(ups);racks.push(ups);
+
+  /* ----- grid connection: two pylons and a power line (no power plant) */
+  var pm=new THREE.MeshStandardMaterial({color:0x6b7873,roughness:0.6});
+  function pylon(x,z,hgt){
+    var p=new THREE.Group();p.position.set(x,0,z);scene.add(p);
+    [[-0.35,-0.2],[0.35,-0.2],[-0.35,0.2],[0.35,0.2]].forEach(function(q){var l=new THREE.Mesh(new THREE.CylinderGeometry(0.025,0.04,hgt,5),pm);l.position.set(q[0]*0.7,hgt/2,q[1]*0.7);l.rotation.z=-q[0]*0.12;l.castShadow=true;p.add(l)});
+    var arm=new THREE.Mesh(new THREE.BoxGeometry(1.8,0.06,0.06),pm);arm.position.set(0,hgt-0.2,0);p.add(arm);
+    return p;
+  }
+  pylon(-15,8.4,3.4);
+  GL.pyl=pylon(-8.6,3.6,3.4);
+  var cv=new THREE.CatmullRomCurve3([new THREE.Vector3(-23,3.4,12.6),new THREE.Vector3(-15,3.2,8.4),new THREE.Vector3(-11.8,2.85,6.0),new THREE.Vector3(-8.6,3.25,3.6),new THREE.Vector3(-7,2.2,2.7),new THREE.Vector3(-5.35,0.7,1.9)]);
+  var lg=new THREE.BufferGeometry().setFromPoints(cv.getPoints(80));scene.add(new THREE.Line(lg,new THREE.LineBasicMaterial({color:0x5b6863})));
+  flowA=makeFlow(cv,0x56b4e9,30);
+  ventPlume=makePlume(new THREE.Vector3(-4.9,podTop+0.95,3.25),0xe0763a,160,{life:3.4,wind:new THREE.Vector3(-0.3,0,0.15),rise:0.9,alpha:0.65,size:0.24,grow:3});
+
+  /* labels: same anchors in both modes, values and extras follow the Energy / Carbon toggle */
+  function tag(id,parent,pos,fn,xo,dx,dy,mode){var el=document.createElement('div');el.className='tag'+(dx?' shift':'');el.tabIndex=0;el.setAttribute('role','button');el.setAttribute('aria-expanded','false');$('#tags').appendChild(el);
+    var tog=function(){var o=!el.classList.contains('open');tags.forEach(function(q){q.el.classList.remove('open');q.el.setAttribute('aria-expanded','false')});if(o){el.classList.add('open');el.setAttribute('aria-expanded','true')}};
+    el.addEventListener('click',function(e){e.stopPropagation();tog()});
+    el.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();tog()}else if(e.key==='Escape'){el.classList.remove('open');el.setAttribute('aria-expanded','false')}});var a=new THREE.Object3D();a.position.set(pos[0],pos[1],pos[2]);parent.add(a);tags.push({el:el,a:a,fn:fn,xo:xo,dx:dx||0,dy:dy||0,mode:mode||null})}
+  var fm=function(x){return nf(x/1000,x<10000?1:0)},ft=function(v){return nf(v,v>=100?0:(v>=1?1:2))},pc=function(x){return nf(x*100,0)+'%'};
+  function lab(i,col,name,val,share,sub,cls){
+    return '<div class="tg1">'+ic(i,col)+'<b>'+name+'</b>&nbsp;<span'+(cls?' class="'+cls+'"':'')+'>'+val+'</span></div>'+
+      (share===null?'':'<div class="tg-bar"><i style="width:'+clamp(share*100,2,100)+'%;background:'+col+'"></i></div>')+(sub?'<div class="tg-sub">'+sub+'</div>':'');
+  }
+  var E=function(){return st.mode==='energy'};
+  tag('pv',g4,[4.6,podTop+0.9,-2.2],function(k){
+    var M=labMonth(k),kwp=B.kwp[k]+(st.scnView?st.scn.pv:0),ex=st.scnView&&st.scn.pv>0?tr(', incl. +'+st.scn.pv+' kWp scenario',', รวม +'+st.scn.pv+' kWp ตามสถานการณ์'):'';
+    if(E())return lab('sun','var(--sun)','Solar PV',nf(kwp)+' kWp, '+fm(M.pv)+' MWh',M.pv/M.tot,pc(M.pv/M.tot)+tr(' of building use',' ของไฟทั้งตึก')+ex);
+    var av=M.pv*M.ef/1000;
+    return lab('sun','var(--sun)','Solar PV',tr('avoids ','หลีกเลี่ยง ')+ft(av)+' tCO\u2082e',av/(av+M.t12),fm(M.pv)+' MWh \u00D7 '+M.ef.toFixed(4)+ex,'ok');
+  });
+  tag('it',gF5,[TCX+TW/2,FM[6].y0+0.3,TD/2+TCZ],function(k){
+    var M=labMonth(k);
+    if(E())return lab('server','#7360b0','Data room + UPS',fm(M.it)+' MWh',M.it/M.tot,pc(M.it/M.tot)+tr(' of electricity',' ของไฟฟ้า'));
+    var t=M.it*M.gs*M.ef/1000;
+    return lab('server','#7360b0','Data room + UPS',ft(t)+' tCO\u2082e',t/M.t12,pc(t/M.t12)+tr(' of Scope 1+2',' ของ Scope 1+2'));
+  },false,110,6);
+  tag('chl',gB2,[-3.5,-0.4,-1.7],function(k){
+    var M=labMonth(k);
+    if(E())return lab('snowflake','#2f6f9f','Chiller plant',fm(M.ch)+' MWh',M.ch/M.tot,pc(M.ch/M.tot)+tr(' of electricity',' ของไฟฟ้า'));
+    var te=M.ch*M.gs*M.ef/1000,t=te+M.r134t,leak=M.r134t>10;
+    return lab('snowflake','#2f6f9f','Chiller plant',ft(t)+' tCO\u2082e',t/M.t12,ft(te)+tr(' electricity + ',' ไฟฟ้า + ')+(leak?ic('triangle-alert','var(--bad)')+'<span class="bad">'+ft(M.r134t)+tr(' refrigerant leak',' สารทำความเย็นรั่ว')+'</span>':ft(M.r134t)+tr(' refrigerant',' สารทำความเย็น')));
+  },true);
+  tag('gen',gB1,[-4.4,-0.1,-2.9],function(k){
+    var M=labMonth(k),nm=tr('Genset','เครื่องปั่นไฟ');
+    if(E())return lab('fuel','#e0892b',nm,tr('diesel ','ดีเซล ')+nf(M.dslL)+tr(' L',' ลิตร'),null,'');
+    return lab('fuel','#e0892b',nm,ft(M.s1dsl)+' tCO\u2082e',M.s1dsl/M.t12,tr('Scope 1, diesel ','Scope 1 ดีเซล ')+nf(M.dslL)+tr(' L',' ลิตร'));
+  },true);
+  tag('s2',GL.pyl,[0,3.5,0],function(k){
+    var M=labMonth(k);
+    if(E())return lab('plug','var(--s2)',tr('Grid import','ไฟจากกริด'),fm(M.grid)+' MWh',M.grid/M.tot,pc(M.grid/M.tot)+tr(' of building use',' ของไฟทั้งตึก'));
+    return lab('factory','var(--s2)','Scope 2',ft(M.s2)+' tCO\u2082e',M.s2/M.t12,pc(M.s2/M.t12)+tr(' of Scope 1+2, EF ',' ของ Scope 1+2, EF ')+M.ef.toFixed(4));
+  });
+  tag('vent',g4,[-4.9,podTop+1.0,3.25],function(k){
+    var M=labMonth(k);
+    return lab('flame','var(--s1)','Scope 1',ft(M.s1)+' tCO\u2082e',M.s1/M.t12,tr('refrigerant ','สารทำความเย็น ')+ft(M.s1ref)+tr(', diesel ',', ดีเซล ')+ft(M.s1dsl));
+  },false,0,0,'carbon');
+  applyTheme();onResize();
+}
+
+var deskMQ=matchMedia('(min-width:641px)');
+function panelW(){return deskMQ.matches&&panelOpen?$('#panel').offsetWidth:0}
+function applyView(){
+  if(!GL||!GL.w)return;
+  if(Math.abs(GL.vo)<0.01)camera.clearViewOffset();else camera.setViewOffset(GL.w,GL.h,GL.vo,0,GL.w,GL.h);
+}
+function onResize(){
+  if(!GL)return;
+  var st0=$('#stage'),w=st0.clientWidth,h=st0.clientHeight;if(!w||!h)return;
+  renderer.setSize(w,h,false);camera.aspect=w/h;GL.w=w;GL.h=h;
+  var vw=w-panelW();cam.rBase=vw/h<1?50:(vw/h<1.5?31:36);if(!GL.userZoom)cam.r=cam.rBase;
+  camera.updateProjectionMatrix();GL.vo=panelW()/2;applyView();
+  pointMats.forEach(function(m){m.uniforms.uScale.value=h*1.45});
+  updCam();
+}
+function updCam(){
+  var sp=Math.sin(cam.phi),ex=exCur||0,r=cam.r*(1+ex*0.28),ty=cam.ty+ex*2.8;
+  camera.position.set(cam.tx+r*sp*Math.sin(cam.theta),ty+r*Math.cos(cam.phi),cam.tz+r*sp*Math.cos(cam.theta));
+  camera.lookAt(cam.tx,ty,cam.tz);
+}
+
+function styleFloors(){
+  if(!GL)return;
+  var sel=st.sel,hov=st.hov,kk=st.idx;
+  var hot=st.mode==='carbon'&&(eqVal(0,kk)>140||eqVal(1,kk)>140);
+  ghostGround=st.xray||hot||(sel===0||sel===1)||(hov===0||hov===1);
+  groundMat.opacity=ghostGround?0.28:1;groundMat.depthWrite=!ghostGround;
+  FM.forEach(function(f,i){
+    var m=f.mat,op=st.xray?0.14:0.93,em=GL.dark?0.2:0.12;
+    if(sel>=0){if(i===sel){op=st.xray?0.6:1;em=0.4}else op=st.xray?0.05:0.16}
+    if(hov>=0&&i===hov){op=Math.max(op,st.xray?0.6:1);em=0.5}
+    m.opacity=op;m.emissiveIntensity=em;m.depthWrite=op>0.5;
+  });
+}
+
+function updateTags(){
+  if(!GL)return;
+  var w=$('#stage').clientWidth,h=$('#stage').clientHeight,v=new THREE.Vector3(),placed=[],pw=panelW();
+  tags.forEach(function(t){
+    var vis=st.labels&&(!t.xo||st.xray||ghostGround)&&(!t.mode||t.mode===st.mode),x=0,y=0;
+    if(vis){t.a.getWorldPosition(v);v.project(camera);
+      if(v.z>1||v.z<-1||Math.abs(v.x)>1.05||Math.abs(v.y)>1.05)vis=false;
+      else{x=(v.x*0.5+0.5)*w+t.dx;y=(-v.y*0.5+0.5)*h+t.dy}}
+    if(!vis){t.el.style.display='none';return}
+    t.el.style.display='block';
+    var bw=t.el.offsetWidth,bh=t.el.offsetHeight,y0=y,x0=x,ex=t.el.classList.contains('open')||t.el.matches(':hover')||t.el===document.activeElement;
+    x=Math.max(bw/2+6,Math.min(x,w-pw-bw/2-6));   /* keep labels inside the part of the stage the panel does not cover */
+    for(var it=0;it<(ex?0:8);it++){            /* labels are drawn above their anchor: move a label up while it overlaps one already placed */
+      var hit=null;
+      for(var j=0;j<placed.length;j++){var q=placed[j];
+        if(x-bw/2<q.x+q.w/2+4&&x+bw/2>q.x-q.w/2-4&&y-bh<q.y+2&&y>q.y-q.h-2){hit=q;break}}
+      if(!hit)break;y=hit.y-hit.h-4;
+    }
+    if(!ex)placed.push({x:x,y:y,w:bw,h:bh});
+    t.el.style.left=x+'px';t.el.style.top=y+'px';t.el.classList.toggle('moved',Math.abs(y-y0)>1||Math.abs(x-x0)>1);
+  });
+}
+function refreshTags_(){}
+document.addEventListener('click',function(e){if(!e.target.closest||!e.target.closest('.tag'))tags.forEach(function(q){q.el.classList.remove('open');q.el.setAttribute('aria-expanded','false')})});
+var lastTagMode=null;
+function refreshTags(){
+  var ch=lastTagMode!==null&&lastTagMode!==st.mode;lastTagMode=st.mode;
+  tags.forEach(function(t){t.el.innerHTML=t.fn(st.idx);if(ch){t.el.classList.remove('fade');void t.el.offsetWidth;t.el.classList.add('fade')}});
+}
+
+var ptrs=new Map(),dragInfo=null,pinch0=0;
+function dist2(){var a=[...ptrs.values()];return Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y)}
+var ray,mp;
+function pick(ev){
+  var r=$('#gl').getBoundingClientRect();mp.set((ev.clientX-r.left)/r.width*2-1,-(ev.clientY-r.top)/r.height*2+1);
+  ray.setFromCamera(mp,camera);
+  var hits=ray.intersectObjects(FM.map(function(f){return f.body}),false);
+  for(var j=0;j<hits.length;j++){var i=hits[j].object.userData.i;if(i<2&&!ghostGround)continue;return i}
+  return -1;
+}
+var tipKey='';
+function tipHtml(i,k){
+  var f=FL[i],kw=flKwh(i,k),sec=annKwhM2(i,k),eq=eqVal(i,k),col=heatCss(eq),rgb=heatRGB(eq),t=flT(i,k),p=flParts(i,k);
+  var prev=k>=12?annKwhM2(i,k-12):null,yo=prev?(sec-prev)/prev:null;
+  var order=FL.map(function(x,j){return j}).sort(function(a,b){return eqVal(b,k)-eqVal(a,k)});
+  var rank=order.indexOf(i)+1;
+  var parts=[['ac',tr('Air-con','แอร์'),'#2f6f9f'],['lt',tr('Lighting','แสงสว่าง'),'#d9a21b'],['eq','Plug + IT','#7360b0'],['ot',tr('Other','อื่นๆ'),'#bb7a4c']];
+  var h='<div class="tp-h"><span class="dot" style="background:'+col+'"></span><b>'+tr('Floor ','ชั้น ')+f.id+'</b><span class="u">'+fuse(f)+'</span>'+
+    '<span class="tp-chip" style="background:rgba('+Math.round(rgb[0])+','+Math.round(rgb[1])+','+Math.round(rgb[2])+',0.22)">'+nf(eq/ZEB,1)+'\u00D7 ZEB</span></div>';
+  h+='<div class="tp-sub">'+lbl(k)+(st.scnView?', '+tr('after measures','หลังปรับปรุง'):'')+'</div>';
+  h+='<div class="tp-k"><div><i>kWh</i><b>'+nf(kw)+'</b></div>'+
+     '<div><i>SEC</i><b style="color:'+heatCss(annKwhM2(i,k))+'">'+nf(sec,0)+'</b><s>'+(yo===null?'\u2013':dTxt(yo,true))+'</s></div>'+
+     '<div><i>tCO\u2082e</i><b>'+nf(t,1)+'</b><s>'+nf(annKgM2(i,k),0)+' kg/m\u00B2</s></div></div>';
+  h+='<div class="tp-bar">';parts.forEach(function(q){h+='<i style="width:'+(p[q[0]]/kw*100)+'%;background:'+q[2]+'"></i>'});h+='</div><div class="tp-leg">';
+  parts.forEach(function(q){h+='<span><span style="color:'+q[2]+'">\u25CF</span> '+q[1]+' <b>'+nf(p[q[0]]/kw*100,0)+'%</b></span>'});h+='</div>';
+  h+='<div class="tp-rk">'+tr('Rank ','อันดับ ')+'<b>'+rank+tr(' of ',' จาก ')+NF+'</b>'+tr(' floors, highest first',' ชั้น (สูงสุดก่อน)')+'</div>';
+  h+='<svg viewBox="0 0 220 30" width="100%" role="img" aria-label="'+tr('Rank of this floor among all floors','อันดับของชั้นนี้เทียบทุกชั้น')+'" style="display:block">';
+  order.forEach(function(j,n){var v=Math.min(eqVal(j,k),160),bh=Math.max(3,v/160*28);
+    h+='<rect x="'+(n*10)+'" y="'+(30-bh)+'" width="7.5" height="'+bh+'" rx="1" '+(j===i?'fill="'+col+'"':'fill="var(--ink2)" opacity=".38"')+'/>'});
+  h+='</svg>';
+  h+='<div class="tp-ft">'+nf(f.users[k])+tr(' people, ',' คน, ')+nf(f.area)+' m\u00B2</div>';
+  return h;
+}
+function tipShow(i,ev){
+  var tip=$('#tip'),k=st.idx,sc=st.scn;
+  var key=[i,k,st.mode,st.scnView,sc.pv,sc.cool,sc.it,sc.lt,sc.plug,sc.ref,LANG].join('|');
+  if(key!==tipKey){tipKey=key;tip.innerHTML=tipHtml(i,k)}
+  tip.style.display='block';
+  var r=$('#stage').getBoundingClientRect(),w=tip.offsetWidth,h=tip.offsetHeight;
+  var x=ev.clientX-r.left+16,y=ev.clientY-r.top+14;
+  var rw=r.width-panelW();
+  if(x+w>rw-6)x=ev.clientX-r.left-w-16;
+  if(y+h>r.height-6)y=r.height-h-6;
+  tip.style.left=Math.max(6,x)+'px';tip.style.top=Math.max(6,y)+'px';
+}
+function bindPointer(){
+  var c=$('#gl');ray=new THREE.Raycaster();mp=new THREE.Vector2();
+  c.addEventListener('pointerdown',function(e){
+    c.setPointerCapture(e.pointerId);ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
+    dragInfo={t:performance.now(),moved:0};if(ptrs.size===2)pinch0=dist2();$('#tip').style.display='none';
+  });
+  c.addEventListener('pointermove',function(e){
+    if(!ptrs.has(e.pointerId)){
+      if(e.pointerType==='mouse'){var i=pick(e);if(i!==st.hov){st.hov=i;styleFloors()}
+        if(i>=0)tipShow(i,e);else $('#tip').style.display='none'}
+      return}
+    var p=ptrs.get(e.pointerId),dx=e.clientX-p.x,dy=e.clientY-p.y;p.x=e.clientX;p.y=e.clientY;
+    if(ptrs.size===1){cam.theta-=dx*0.006;cam.phi=clamp(cam.phi-dy*0.005,0.2,1.5);dragInfo.moved+=Math.abs(dx)+Math.abs(dy)}
+    else if(ptrs.size===2){var d=dist2();cam.r=clamp(cam.r*pinch0/d,12,90);pinch0=d;dragInfo.moved+=99;GL.userZoom=true}
+    updCam();
+  });
+  function up(e){
+    var was=ptrs.has(e.pointerId);ptrs.delete(e.pointerId);
+    if(was&&dragInfo&&dragInfo.moved<6&&performance.now()-dragInfo.t<600&&ptrs.size===0){
+      var i=pick(e);if(i>=0)selectFloor(i,false);else if(st.sel>=0){st.sel=-1;styleFloors();updatePanel()}
+    }
+  }
+  c.addEventListener('pointerup',up);c.addEventListener('pointercancel',function(e){ptrs.delete(e.pointerId)});
+  c.addEventListener('pointerleave',function(e){if(e.pointerType==='mouse'){$('#tip').style.display='none';if(st.hov!==-1){st.hov=-1;styleFloors()}}});
+  c.addEventListener('wheel',function(e){cam.r=clamp(cam.r*(1+e.deltaY*0.0012),12,90);GL.userZoom=true;updCam()},{passive:true});
+}
+
+/* ====================================================== apply state */
+function apply(){
+  var k=st.idx;
+  slider.value=k;$('#mlabel').textContent=lbl(k);$('#ev').textContent=evText(k);
+  updLegend();
+  if(GL){
+    FM.forEach(function(f,i){f.tcol=heatRGB(eqVal(i,k))});
+    var n=B.kwp[k]/D.meta.kwpPerGroup;pvPanels.forEach(function(p,j){p.visible=j<n});
+    var ns=st.scnView?st.scn.pv/10:0;pvScn.forEach(function(p,j){p.visible=j<ns});GL.canopy.visible=ns>35;
+    var yieldIdx=B.kwp[k]?B.pv[k]/(B.kwp[k]*D.days[k]*3.4):0;pvMat.emissiveIntensity=0.1+0.5*clamp(yieldIdx,0,1.2);
+    ventPlume.rate=clamp(B.s1[k]/200,0.03,1);
+    GL.flowSpeed=0.04+0.16*clamp(B.grid[k]/450000,0,1);
+    var itL=clamp(B.sys.it[k]/110000,0.2,1.2);racks.forEach(function(r){r.material.emissiveIntensity=0.25+0.7*itL});
+    GL.chL=clamp(B.sys.chiller[k]/130000,0.1,1.3);chillers.forEach(function(c){c.material.emissiveIntensity=0.1+0.6*GL.chL});
+    genMesh.material.emissiveIntensity=0.1+clamp(B.dslL[k]/400,0,1)*0.9;
+    refreshTags();styleFloors();
+  }
+  updatePanel();
+}
+
+var lastT=0,clockT=0;
+function loop(ts){
+  requestAnimationFrame(loop);
+  var dt=Math.min(0.05,(ts-lastT)/1000||0.016);lastT=ts;clockT+=dt;
+  if(st.play){playAcc+=dt;if(playAcc>0.42){playAcc=0;if(st.idx<LAST)setIdx(st.idx+1);else{st.play=false;setPlayIcon()}}}
+  if(!GL)return;
+  if(st.rotate&&ptrs.size===0){cam.theta+=dt*0.07;updCam()}
+  var vt=panelW()/2;if(Math.abs(vt-GL.vo)>0.3){GL.vo+=(vt-GL.vo)*Math.min(1,dt*9);applyView()}else if(GL.vo!==vt){GL.vo=vt;applyView()}
+  var exT=st.explode?1:0;exCur+=(exT-exCur)*Math.min(1,dt*4);if(Math.abs(exT-exCur)>0.002)updCam();
+  FM.forEach(function(f,i){
+    f.grp.position.y=exCur*(i-2)*0.26;
+    for(var c=0;c<3;c++)f.col[c]+=(f.tcol[c]-f.col[c])*Math.min(1,dt*6);
+    f.mat.color.setRGB(f.col[0]/255,f.col[1]/255,f.col[2]/255);f.mat.emissive.setRGB(f.col[0]/255,f.col[1]/255,f.col[2]/255);
+  });
+  var rs=reduce?0.2:1;
+  ventPlume.update(dt*rs);
+  flowT=(flowT+dt*GL.flowSpeed*rs)%1;flowA.update(flowT);
+  fans.forEach(function(f){f.rotation.y+=dt*(2+8*(GL.chL||0.5))});
+  GL.tip.visible=Math.floor(clockT*1.2)%2===0;
+  updateTags();
+  renderer.render(scene,camera);
+}
+
+/* ====================================================== boot */
+applyLang();buildTicks();themeIcon();
+setTab('overview');
+try{
+  initScene();bindPointer();
+  new ResizeObserver(onResize).observe($('#stage'));
+}catch(err){
+  console.warn('3D unavailable:',err);GL=null;$('#gl').style.display='none';$('#fallback').style.display='grid';$('#tools').style.display='none';
+}
+apply();
+if(GL)FM.forEach(function(f,i){f.col=heatRGB(eqVal(i,st.idx));f.tcol=f.col.slice()});
+styleFloors();
+requestAnimationFrame(loop);
+window.__twin={st:st,setIdx:setIdx,setTab:setTab,selectFloor:selectFloor,setLang:setLang,cam:cam,updCam:updCam,apply:apply,
+  dbg:function(){return {GL:GL,scene:scene,renderer:renderer,camera:camera,FM:FM,tags:tags}}};
+})();
+</script>
+</body>
+</html>
