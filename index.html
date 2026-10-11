@@ -257,6 +257,11 @@ svg.ic{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;strok
   .tab[aria-selected=true]{flex:2.4}
   .tab[aria-selected=true] .lbl{display:inline}
 }
+#evToast{display:none}
+@media (max-width:640px){
+  #yrs,#ticks,#ev{display:none}
+  #evToast.on{display:block;position:absolute;left:10px;right:10px;top:56px;margin:0 auto;width:fit-content;max-width:calc(100% - 20px);padding:4px 11px;border-radius:99px;background:var(--panel);border:1px solid var(--line);font-size:12px;color:var(--ink);pointer-events:none;text-align:center}
+}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 @media (max-width:860px){
   #tools{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
@@ -299,6 +304,7 @@ svg.ic{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;strok
     </div>
     <div id="legend"></div>
     <button class="pbtn" id="panelBtn" aria-controls="panel"></button>
+    <div id="evToast" role="status" aria-live="polite"></div>
     <div id="tip"></div>
     <div id="fallback"><div id="fbtxt"></div></div>
   </section>
@@ -830,10 +836,12 @@ playBtn.addEventListener('click',function(){
 });
 var playAcc=0;
 function setIdx(k){st.idx=clamp(k,0,LAST);apply()}
-function evText(k){
+function evInfo(k){
   var best=null;D.events.forEach(function(e){if(e.i<=k&&k-e.i<=2)best=e});
-  if(best)return (best.i===k?tr('Event: ','เหตุการณ์: '):tr('Since '+lbl(best.i)+': ','เมื่อ '+lbl(best.i)+': '))+evName(best);
-  return tr('Drag the timeline or press play. Coloured marks show key events.','เลื่อนไทม์ไลน์หรือกดเล่น จุดสีบนแถบคือเหตุการณ์สำคัญ');
+  return best?(best.i===k?tr('Event: ','เหตุการณ์: '):tr('Since '+lbl(best.i)+': ','เมื่อ '+lbl(best.i)+': '))+evName(best):null;
+}
+function evText(k){
+  return evInfo(k)||tr('Drag the timeline or press play. Coloured marks show key events.','เลื่อนไทม์ไลน์หรือกดเล่น จุดสีบนแถบคือเหตุการณ์สำคัญ');
 }
 
 /* ====================================================== controls */
@@ -1266,7 +1274,7 @@ function bindPointer(){
 /* ====================================================== apply state */
 function apply(){
   var k=st.idx;
-  slider.value=k;$('#mlabel').textContent=lbl(k);$('#ev').textContent=evText(k);
+  slider.value=k;$('#mlabel').textContent=lbl(k);$('#ev').textContent=evText(k);var et=evInfo(k);$('#evToast').textContent=et||'';$('#evToast').classList.toggle('on',!!et);
   updLegend();
   if(GL){
     FM.forEach(function(f,i){f.tcol=heatRGB(eqVal(i,k))});
